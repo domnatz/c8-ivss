@@ -1,6 +1,5 @@
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = "postgresql+asyncpg://myuser:domnatz@localhost:5432/calibr8_ivss"
