@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { SearchForm } from "@/components/user/search-form";
-import { PlusIcon, CubeIcon, AdjustmentsVerticalIcon, DocumentPlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CubeIcon, AdjustmentsVerticalIcon, DocumentPlusIcon, PlusCircleIcon, ArrowTurnDownRightIcon } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,75 +35,107 @@ import {
 } from "@/components/ui/sidebar";
 import icon from "../../../public/icon-calibr8.png";
 
-// Mock data
-const initialData = {
-  assets: [
-    {
-      asset_id: 1,
-      asset_type: "unclassified",
-      asset_name: "Transformer 1",
-      subgroups: [
-        {
-          title: "Installation",
-          url: "#",
-        },
-        {
-          title: "Project Structure",
-          url: "#",
-        },
-      ],
-    },
-  ],
+// Define the type for a subgroup
+type Subgroup = {
+  subgroup_id: number;
+  subgroup_name: string;
+  url: string;
+};
+
+// Define the type for an asset
+type Asset = {
+  asset_id: number;
+  asset_type: string;
+  asset_name: string;
+  subgroups: Subgroup[];
 };
 
 // Filter options
 const filterOptions = [
   { label: "Newest Added", value: "newest" },
   { label: "Oldest", value: "oldest" },
-  { label: "A-Z", value: "asc" },
-  { label: "Z-A", value: "desc" },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [assets, setAssets] = React.useState(initialData.assets);
-
-  // State to manage the selected filter
+  // Initialize assets as an empty array with the type Asset[]
+  const [assets, setAssets] = React.useState<Asset[]>([]);
+  const [subgroups, setSubgroups] = React.useState<Subgroup[]>([]);
   const [filter, setFilter] = React.useState("newest");
+  const [searchQuery, setSearchQuery] = React.useState('');
 
-  // Function to add a new asset
   const addAsset = () => {
-    const newAsset = {
-      title: `New Asset ${assets.length + 1}`, // Default name for the new asset
-      url: "#",
-      subgroups: [], // Start with no subgroups
+    const lastId = assets.length > 0 ? Math.max(...assets.map(asset => asset.asset_id)) : 0;
+    const newAsset: Asset = {
+      asset_id: lastId + 1,
+      asset_type: "unclassified",
+      asset_name: `New Asset ${lastId + 1}`,
+      subgroups: [],
     };
     setAssets([...assets, newAsset]);
-    console.log("Asset added successfully");
   };
-
-  // Function to handle renaming an asset
-  const renameAsset = (index: number, newTitle: string) => {
-    const updatedAssets = [...assets];
-    updatedAssets[index].title = newTitle;
+  
+  const renameSubgroup = (asset_id: number, subgroup_id: number, newName: string) => {
+    const updatedAssets = assets.map((asset) => {
+      if (asset.asset_id === asset_id) {
+        return {
+          ...asset,
+          subgroups: asset.subgroups.map((subgroup) =>
+            subgroup.subgroup_id === subgroup_id
+              ? { ...subgroup, subgroup_name: newName }
+              : subgroup
+          ),
+        };
+      }
+      return asset;
+    });
     setAssets(updatedAssets);
   };
 
-  const sortAssets = (assets: typeof initialData.assets, filter: string) => {
+  // Rename asset by asset_id instead of index
+  const renameAsset = (asset_id: number, newTitle: string) => {
+    const updatedAssets = assets.map((asset) =>
+      asset.asset_id === asset_id ? { ...asset, asset_name: newTitle } : asset
+    );
+    setAssets(updatedAssets);
+  };
+  
+  const addSubgroup = (asset_id: number) => {
+    const updatedAssets = assets.map((asset) => {
+      if (asset.asset_id === asset_id) {
+        const lastSubgroupId = asset.subgroups.length > 0 
+          ? Math.max(...asset.subgroups.map(subgroup => subgroup.subgroup_id)) 
+          : 0;
+        const newSubgroup: Subgroup = {
+          subgroup_id: lastSubgroupId + 1,
+          subgroup_name: `New Subgroup ${lastSubgroupId + 1}`,
+          url: `#${lastSubgroupId + 1}`,
+        };
+        return {
+          ...asset,
+          subgroups: [...asset.subgroups, newSubgroup],
+        };
+      }
+      return asset;
+    });
+    setAssets(updatedAssets);
+  };
+  
+  const sortAssets = (assets: Asset[], filter: string) => {
     switch (filter) {
       case "newest":
-        return [...assets].reverse(); // Newest added first
+        return [...assets].reverse();
       case "oldest":
-        return [...assets]; // Oldest first (original order)
-      case "asc":
-        return [...assets].sort((a, b) => a.title.localeCompare(b.title)); // A-Z
-      case "desc":
-        return [...assets].sort((a, b) => b.title.localeCompare(a.title)); // Z-A
+        return [...assets];
       default:
         return assets;
     }
   };
 
   const sortedAssets = sortAssets(assets, filter);
+  const filteredAndSortedAssets = sortedAssets.filter(asset =>
+    asset.asset_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
 
   return (
     <Sidebar {...props}>
@@ -116,9 +148,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </span>
         </div>
 
-        {/* Uploading of masterlist */}
         <div className="p-2 border-b-[0.5px] items-start flex flex-col gap-2 justify-between">
-          
           <Input
             type="file"
             accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
@@ -128,11 +158,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Button className="w-full rounded-sm">
             <DocumentPlusIcon className="w-5 h-5" />
             Upload Masterlist
-            </Button>
+          </Button>
         </div>
 
         <div className="flex flex-row w-full">
-          <SearchForm className="w-full" />
+          <SearchForm 
+            className="w-full" 
+            value={searchQuery}
+            onInputChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <DropdownMenu>
             <DropdownMenuTrigger className="p-2">
               <AdjustmentsVerticalIcon className="w-5 h-5 text-zinc-500" />
@@ -140,7 +175,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <DropdownMenuContent>
               <DropdownMenuLabel>Sort By</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Map filter options */}
               {filterOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
@@ -153,9 +187,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </DropdownMenu>
         </div>
 
-        <div className="flex justify-between w-full items-center pl-4 py-2 pr-3 border-y-[0.5px] border-zinc-300">
+      {/* Add Assets Button */}
+        <div className="flex justify-between w-full items-center pl-4 py-2 pr-2 border-y-[0.5px] border-zinc-300">
           <Label>Assets</Label>
-          {/* Add assets button */}
           <Button
             variant="ghost"
             size="sm"
@@ -167,12 +201,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarHeader>
 
+      {/* Where it maps Assets */}
       <SidebarContent className="gap-0">
-        {/* Render sorted assets */}
-        {sortedAssets.map((asset, index) => (
+        {filteredAndSortedAssets.map((asset) => (
           <Collapsible
-            key={index}
-            title={asset.title}
+            key={asset.asset_id}
             defaultOpen
             className="group/collapsible border-b-[0.5px] border-zinc-300"
           >
@@ -184,11 +217,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <CollapsibleTrigger>
                   <div className="flex items-center justify-center">
                     <CubeIcon className="w-5 h-5 pr-1" />
-                    {/* Editable asset title */}
                     <Input
-                      value={asset.title}
-                      onChange={(e) => renameAsset(index, e.target.value)}
+                      value={asset.asset_name}
+                      onChange={(e) => renameAsset(asset.asset_id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          (e.target as HTMLInputElement).blur(); 
+                        }
+                      }}
                       className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0"
+                      onClick={(e) => e.stopPropagation()} // Prevent the CollapsibleTrigger from toggling when clicking the input
                     />
                   </div>
                   <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -196,17 +234,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarGroupLabel>
               <CollapsibleContent>
                 <SidebarGroupContent>
-                  {/* Render subgroups */}
                   <SidebarMenu>
+
+                    {/* Add Subgroup Button */}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="justify-between text-xs"
+                      onClick={() => addSubgroup(asset.asset_id)} // Pass the asset_id to the function
+                    >
+
+                      <span>Add Subgroup</span>
+                      <PlusCircleIcon className="w-5 h-5"/>
+                    </Button>
+                  
                     {asset.subgroups.map((subgroup, subIndex) => (
-                      <SidebarMenuItem key={subIndex} className="pl-4">
+                      <SidebarMenuItem key={subIndex} className="pl-6">
                         <SidebarMenuButton asChild>
-                          <a href={subgroup.url}>{subgroup.title}</a>
+                          <div className="flex items-center justify-start w-full">
+                            <ArrowTurnDownRightIcon className="w-5 h-5"/>
+                            <Input
+                              value={subgroup.subgroup_name}
+                              onChange={(e) =>
+                                renameSubgroup(asset.asset_id, subgroup.subgroup_id, e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                              className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium"
+                              onClick={(e) => e.stopPropagation()} // Prevent CollapsibleTrigger from toggling
+                            />
+                          </div>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
-                </SidebarGroupContent>
+                </SidebarGroupContent>  
               </CollapsibleContent>
             </SidebarGroup>
           </Collapsible>
