@@ -20,6 +20,7 @@ class Subgroups(Base):
     subgroup_id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(Integer, ForeignKey("assets.asset_id", ondelete="CASCADE"))
     subgroup_name = Column(String, nullable=False)
+    url = Column(String, nullable=False)
     asset = relationship("Assets", back_populates="subgroups")
     subgroup_tags = relationship("SubgroupTag", back_populates="subgroup", cascade="all, delete")
     templates = relationship("SubgroupTemplate", back_populates="subgroup", cascade="all, delete")

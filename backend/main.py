@@ -71,6 +71,23 @@ async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Dep
     await db.refresh(existing_asset)
     return existing_asset
 
+class SubgroupCreate(BaseModel):
+    title: str
+    url: str
+
+@app.post("/assets/{asset_id}/subgroups")
+async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
+    existing_asset = result.scalars().first()
+    if not existing_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    
+    new_subgroup = models.Subgroups(title=subgroup.title, url=subgroup.url, asset_id=asset_id)
+    db.add(new_subgroup)
+    await db.commit()
+    await db.refresh(new_subgroup)
+    return new_subgroup
+
 @app.post("/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
