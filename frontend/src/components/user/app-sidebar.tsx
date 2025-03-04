@@ -39,8 +39,9 @@ import icon from "../../../public/icon-calibr8.png";
 const initialData = {
   assets: [
     {
-      title: "Transformer 1",
-      url: "#",
+      asset_id: 1,
+      asset_type: "unclassified",
+      asset_name: "Transformer 1",
       subgroups: [
         {
           title: "Installation",
@@ -64,7 +65,6 @@ const filterOptions = [
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  // State to manage assets
   const [assets, setAssets] = React.useState(initialData.assets);
 
   // State to manage the selected filter
@@ -88,7 +88,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setAssets(updatedAssets);
   };
 
-  // Function to sort assets based on the selected filter
   const sortAssets = (assets: typeof initialData.assets, filter: string) => {
     switch (filter) {
       case "newest":
@@ -104,7 +103,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   };
 
-  // Apply the filter to the assets
   const sortedAssets = sortAssets(assets, filter);
 
   return (
