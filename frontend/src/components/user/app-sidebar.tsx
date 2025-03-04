@@ -65,7 +65,6 @@ const filterOptions = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Initialize assets as an empty array with the type Asset[]
   const [assets, setAssets] = React.useState<Asset[]>([]);
-  const [subgroups, setSubgroups] = React.useState<Subgroup[]>([]);
   const [filter, setFilter] = React.useState("newest");
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -73,14 +72,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     fetch("http://localhost:8000/assets")
       .then((response) => response.json())
-      .then((data) =>
-        setAssets(
-          data.map((asset: Asset) => ({
-            ...asset,
-            subgroups: asset.subgroups || [],
-          }))
-        )
-      )
+      .then(async (data) => {
+        // Fetch subgroups for each asset
+        const assetsWithSubgroups = await Promise.all(
+          data.map(async (asset: Asset) => {
+            try {
+              const subgroupsResponse = await fetch(`http://localhost:8000/assets/${asset.asset_id}/subgroups`);
+              if (subgroupsResponse.ok) {
+                const subgroups = await subgroupsResponse.json();
+                return { ...asset, subgroups: Array.isArray(subgroups) ? subgroups : [] };
+              } else {
+                return { ...asset, subgroups: [] };
+              }
+            } catch (error) {
+              console.error(`Error fetching subgroups for asset ${asset.asset_id}:`, error);
+              return { ...asset, subgroups: [] };
+            }
+          })
+        );
+        setAssets(assetsWithSubgroups);
+      })
       .catch((error) => {
         console.error("There was an error fetching the assets!", error);
         setAssets([]); // Ensure assets is set to an empty array on error
@@ -359,7 +370,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <span>Add Subgroup</span>
                       <PlusCircleIcon className="w-5 h-5" />
                     </Button>
-                    {asset.subgroups && asset.subgroups.map((subgroup, subIndex) => (
+                    {Array.isArray(asset.subgroups) && asset.subgroups.map((subgroup, subIndex) => (
                       <SidebarMenuItem key={subgroup.subgroup_id} className="pl-6">
                         <SidebarMenuButton asChild>
                           <div className="flex items-center justify-start w-full">

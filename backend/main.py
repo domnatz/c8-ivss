@@ -44,6 +44,12 @@ async def get_assets(db: AsyncSession = Depends(get_db)):
     assets = result.scalars().all()
     return assets
 
+@app.get("/assets/{asset_id}/subgroups")
+async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
+    subgroups = result.scalars().all()
+    return subgroups
+
 class AssetCreate(BaseModel):
     asset_name: str
     asset_type: str
