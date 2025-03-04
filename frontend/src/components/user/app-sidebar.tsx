@@ -7,7 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { SearchForm } from "@/components/user/search-form";
-import { PlusIcon, CubeIcon, AdjustmentsVerticalIcon, DocumentPlusIcon, PlusCircleIcon, ArrowTurnDownRightIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  CubeIcon,
+  AdjustmentsVerticalIcon,
+  DocumentPlusIcon,
+  PlusCircleIcon,
+  ArrowTurnDownRightIcon,
+} from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +46,6 @@ import icon from "../../../public/icon-calibr8.png";
 type Subgroup = {
   subgroup_id: number;
   subgroup_name: string;
-  url: string;
 };
 
 // Define the type for an asset
@@ -61,65 +67,168 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [subgroups, setSubgroups] = React.useState<Subgroup[]>([]);
   const [filter, setFilter] = React.useState("newest");
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState("");
 
+  // Fetch assets from backend
+  React.useEffect(() => {
+    fetch("http://localhost:8000/assets")
+      .then((response) => response.json())
+      .then((data) =>
+        setAssets(
+          data.map((asset: Asset) => ({
+            ...asset,
+            subgroups: asset.subgroups || [],
+          }))
+        )
+      )
+      .catch((error) => {
+        console.error("There was an error fetching the assets!", error);
+        setAssets([]); // Ensure assets is set to an empty array on error
+      });
+  }, []);
+
+  // Add asset by calling backend API
   const addAsset = () => {
-    const lastId = assets.length > 0 ? Math.max(...assets.map(asset => asset.asset_id)) : 0;
-    const newAsset: Asset = {
-      asset_id: lastId + 1,
-      asset_type: "unclassified",
-      asset_name: `New Asset ${lastId + 1}`,
-      subgroups: [],
-    };
-    setAssets([...assets, newAsset]);
-  };
-  
-  const renameSubgroup = (asset_id: number, subgroup_id: number, newName: string) => {
-    const updatedAssets = assets.map((asset) => {
-      if (asset.asset_id === asset_id) {
-        return {
-          ...asset,
-          subgroups: asset.subgroups.map((subgroup) =>
-            subgroup.subgroup_id === subgroup_id
-              ? { ...subgroup, subgroup_name: newName }
-              : subgroup
-          ),
-        };
-      }
-      return asset;
-    });
-    setAssets(updatedAssets);
+    fetch("http://localhost:8000/assets", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        asset_name: `New Asset`,
+        asset_type: "unclassified",
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) =>
+        setAssets((prevAssets) => [
+          ...(prevAssets || []),
+          { ...data, subgroups: [] },
+        ])
+      )
+      .catch((error) => {
+        console.error("There was an error adding the asset!", error);
+      });
   };
 
-  // Rename asset by asset_id instead of index
-  const renameAsset = (asset_id: number, newTitle: string) => {
-    const updatedAssets = assets.map((asset) =>
-      asset.asset_id === asset_id ? { ...asset, asset_name: newTitle } : asset
-    );
-    setAssets(updatedAssets);
+  // Upload masterlist by calling backend API
+  const uploadMasterlist = (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("http://localhost:8000/upload_masterlist", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Masterlist uploaded successfully!", data);
+        // Refresh assets if necessary
+      })
+      .catch((error) => {
+        console.error("There was an error uploading the masterlist!", error);
+      });
   };
-  
+
+  // Add subgroup to asset by calling backend API
   const addSubgroup = (asset_id: number) => {
-    const updatedAssets = assets.map((asset) => {
-      if (asset.asset_id === asset_id) {
-        const lastSubgroupId = asset.subgroups.length > 0 
-          ? Math.max(...asset.subgroups.map(subgroup => subgroup.subgroup_id)) 
-          : 0;
-        const newSubgroup: Subgroup = {
-          subgroup_id: lastSubgroupId + 1,
-          subgroup_name: `New Subgroup ${lastSubgroupId + 1}`,
-          url: `#${lastSubgroupId + 1}`,
-        };
-        return {
-          ...asset,
-          subgroups: [...asset.subgroups, newSubgroup],
-        };
-      }
-      return asset;
-    });
-    setAssets(updatedAssets);
-  };
+    const payload = {
+      subgroup_name: `New Subgroup`, // Only include subgroup_name
+    };
   
+    console.log("Sending payload:", payload); // Log the payload
+  
+    fetch(`http://localhost:8000/assets/${asset_id}/subgroups`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((errorData) => {
+            console.error("Server error details:", errorData); // Log server error details
+            throw new Error(`Failed to add subgroup: ${JSON.stringify(errorData)}`);
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Subgroup added successfully:", data); // Log success
+        const updatedAssets = (assets || []).map((asset) => {
+          if (asset.asset_id === asset_id) {
+            return { ...asset, subgroups: [...(asset.subgroups || []), data] };
+          }
+          return asset;
+        });
+        setAssets(updatedAssets);
+      })
+      .catch((error) => {
+        console.error("There was an error adding the subgroup!", error);
+      });
+  };
+
+  // Rename subgroup by calling backend API
+  const renameSubgroup = (
+    asset_id: number,
+    subgroup_id: number,
+    newName: string
+  ) => {
+    fetch(`http://localhost:8000/subgroups/${subgroup_id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        subgroup_name: newName,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const updatedAssets = (assets || []).map((asset) => {
+          if (asset.asset_id === asset_id) {
+            return {
+              ...asset,
+              subgroups: asset.subgroups.map((subgroup) =>
+                subgroup.subgroup_id === subgroup_id
+                  ? { ...subgroup, subgroup_name: newName }
+                  : subgroup
+              ),
+            };
+          }
+          return asset;
+        });
+        setAssets(updatedAssets);
+      })
+      .catch((error) => {
+        console.error("There was an error renaming the subgroup!", error);
+      });
+  };
+
+  // Rename asset by calling backend API
+  const renameAsset = (asset_id: number, newTitle: string) => {
+    fetch(`http://localhost:8000/assets/${asset_id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        asset_name: newTitle,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const updatedAssets = (assets || []).map((asset) =>
+          asset.asset_id === asset_id ? { ...asset, asset_name: newTitle } : asset
+        );
+        setAssets(updatedAssets);
+      })
+      .catch((error) => {
+        console.error("There was an error renaming the asset!", error);
+      });
+  };
+
   const sortAssets = (assets: Asset[], filter: string) => {
     switch (filter) {
       case "newest":
@@ -131,11 +240,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   };
 
-  const sortedAssets = sortAssets(assets, filter);
-  const filteredAndSortedAssets = sortedAssets.filter(asset =>
+  const sortedAssets = sortAssets(assets || [], filter);
+  const filteredAndSortedAssets = sortedAssets.filter((asset) =>
     asset.asset_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
 
   return (
     <Sidebar {...props}>
@@ -154,6 +262,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             className="w-full file:text-sm rounded-sm"
             id="masterlist"
+            onChange={(e) => {
+              if (e.target.files) {
+                uploadMasterlist(e.target.files[0]);
+              }
+            }}
           />
           <Button className="w-full rounded-sm">
             <DocumentPlusIcon className="w-5 h-5" />
@@ -162,8 +275,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
 
         <div className="flex flex-row w-full">
-          <SearchForm 
-            className="w-full" 
+          <SearchForm
+            className="w-full"
             value={searchQuery}
             onInputChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -187,7 +300,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </DropdownMenu>
         </div>
 
-      {/* Add Assets Button */}
+        {/* Add Assets Button */}
         <div className="flex justify-between w-full items-center pl-4 py-2 pr-2 border-y-[0.5px] border-zinc-300">
           <Label>Assets</Label>
           <Button
@@ -222,7 +335,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       onChange={(e) => renameAsset(asset.asset_id, e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          (e.target as HTMLInputElement).blur(); 
+                          (e.target as HTMLInputElement).blur();
                         }
                       }}
                       className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0"
@@ -237,22 +350,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenu>
 
                     {/* Add Subgroup Button */}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="justify-between text-xs"
                       onClick={() => addSubgroup(asset.asset_id)} // Pass the asset_id to the function
                     >
-
                       <span>Add Subgroup</span>
-                      <PlusCircleIcon className="w-5 h-5"/>
+                      <PlusCircleIcon className="w-5 h-5" />
                     </Button>
-                  
-                    {asset.subgroups.map((subgroup, subIndex) => (
-                      <SidebarMenuItem key={subIndex} className="pl-6">
+                    {asset.subgroups && asset.subgroups.map((subgroup, subIndex) => (
+                      <SidebarMenuItem key={subgroup.subgroup_id} className="pl-6">
                         <SidebarMenuButton asChild>
                           <div className="flex items-center justify-start w-full">
-                            <ArrowTurnDownRightIcon className="w-5 h-5"/>
+                            <ArrowTurnDownRightIcon className="w-5 h-5" />
                             <Input
                               value={subgroup.subgroup_name}
                               onChange={(e) =>
@@ -270,8 +381,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
+                    ...
                   </SidebarMenu>
-                </SidebarGroupContent>  
+                </SidebarGroupContent>
               </CollapsibleContent>
             </SidebarGroup>
           </Collapsible>
