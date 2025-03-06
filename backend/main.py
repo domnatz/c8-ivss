@@ -8,6 +8,7 @@ import csv
 from io import StringIO, BytesIO
 from openpyxl import load_workbook
 from pydantic import BaseModel
+from typing import List
 
 # Initialize database
 async def init_models():
@@ -117,6 +118,8 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
+        # Default column name for tags
+        tags_column = "tags"
         # Process the file based on its type
         if file.filename.endswith('.csv'):
             content = await file.read()
@@ -127,17 +130,41 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                 db.add(masterlist)
                 await db.commit()
                 await db.refresh(masterlist)
+                # Extract and store tags
+                if tags_column in row:
+                    tags = row[tags_column].split(',')  # Assuming tags are comma-separated
+                    for tag_name in tags:
+                        tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.id)
+                        db.add(tag)
+                    await db.commit()
         else:
             content = await file.read()
             workbook = load_workbook(filename=BytesIO(content))
             sheet = workbook.active
+            headers = [cell.value for cell in sheet[1]]  # Get headers from the first row
+            tags_idx = headers.index(tags_column) if tags_column in headers else None
+            if tags_idx is None:
+                raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
             for row in sheet.iter_rows(min_row=2, values_only=True):
                 masterlist = models.MasterList(file_name=row[0])
                 db.add(masterlist)
                 await db.commit()
                 await db.refresh(masterlist)
+                # Extract and store tags
+                tags = row[tags_idx].split(',')  # Assuming tags are comma-separated
+                for tag_name in tags:
+                    tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.id)
+                    db.add(tag)
+                await db.commit()
 
         return {"message": "Masterlist uploaded successfully"}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+# Add this new endpoint to fetch tags
+@app.get("/tags", response_model=List[models.Tags])
+async def get_tags(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Tags))
+    tags = result.scalars().all()
+    return tags
