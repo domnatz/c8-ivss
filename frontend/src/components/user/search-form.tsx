@@ -9,19 +9,25 @@ import {
 interface SearchFormProps extends React.ComponentProps<"form"> {
   value: string;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string; // Add placeholder prop
 }
 
-export function SearchForm({ value = "", onInputChange, ...props }: SearchFormProps) {
+export function SearchForm({
+  value = "",
+  onInputChange,
+  placeholder = "Find Assets..", // Default placeholder
+  ...props
+}: SearchFormProps) {
   return (
     <form {...props} onSubmit={(e) => e.preventDefault()}>
-      <SidebarGroup className="py-0">
+      <SidebarGroup className="py-0 px-0 h-full">
         <SidebarGroupContent className="relative">
           <Label htmlFor="search" className="sr-only">
             Search
           </Label>
           <SidebarInput
             id="search"
-            placeholder="Find Assets.."
+            placeholder={placeholder} // Use the placeholder prop
             className="pl-8"
             value={value}
             onChange={onInputChange}
