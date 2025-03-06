@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { SearchForm } from "@/components/user/search-form";
 import {
@@ -46,7 +46,7 @@ import icon from "../../../public/icon-calibr8.png";
 export type Masterlist = {
   file_id: number;
   file_name: string;
-}
+};
 export type subgroup_tag = {
   subgroup_tag_id: number;
   tag_id: number; // Foreign key from tag table
@@ -68,49 +68,6 @@ export type Asset = {
   asset_name: string;
   subgroups: Subgroup[];
 };
-export const mockAssets: Asset[] = [
-  {
-    asset_id: 1,
-    asset_type: "Transformer",
-    asset_name: "Transformer 1",
-    subgroups: [
-      {
-        subgroup_id: 1,
-        subgroup_name: "Temperature Tags",
-        subgroup_tags: [],
-      },
-      {
-        subgroup_id: 2,
-        subgroup_name: "Voltage Tags",
-        subgroup_tags: [],
-      },
-    ],
-  },
-  {
-    asset_id: 2,
-    asset_type: "Transformer",
-    asset_name: "TISTING",
-    subgroups: [
-      {
-        subgroup_id: 3,
-        subgroup_name: "Pressure Tags",
-        subgroup_tags: [],
-      },
-      {
-        subgroup_id: 4,
-        subgroup_name: "Flow Tags",
-        subgroup_tags: [],
-      },
-    ],
-  },
-];
-
-
-// Filter options
-const filterOptions = [
-  { label: "Newest Added", value: "newest" },
-  { label: "Oldest", value: "oldest" },
-];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Initialize assets as an empty array with the type Asset[]
@@ -173,6 +130,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
   };
 
+  const filterOptions = [
+    { label: "Newest Added", value: "newest" },
+    { label: "Oldest", value: "oldest" },
+  ];
+
   // Upload masterlist by calling backend API
   const uploadMasterlist = (file: File) => {
     const formData = new FormData();
@@ -197,9 +159,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const payload = {
       subgroup_name: `New Subgroup`, // Only include subgroup_name
     };
-  
+
     console.log("Sending payload:", payload); // Log the payload
-  
+
     fetch(`http://localhost:8000/assets/${asset_id}/subgroups`, {
       method: "POST",
       headers: {
@@ -389,7 +351,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 asChild
                 className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
-              <CollapsibleTrigger
+                <CollapsibleTrigger
                   onClick={() => {
                     // Navigate to the asset's page
                     router.push(`/${asset.asset_id}`);
