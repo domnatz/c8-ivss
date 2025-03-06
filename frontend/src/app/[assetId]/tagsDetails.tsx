@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Masterlist } from "@/components/user/app-sidebar";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { SearchForm } from "@/components/user/search-form";
 
 export type Tags = {
   tag_id: number;
@@ -54,6 +56,12 @@ interface TagDetailsProps {
 }
 
 export function TagDetails({ onAddTag }: TagDetailsProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTags = mockTags.filter((tag) =>
+    tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -67,9 +75,18 @@ export function TagDetails({ onAddTag }: TagDetailsProps) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* Search Form */}
+
+          <SearchForm
+            value={searchQuery}
+            onInputChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter tags..."
+          />
+
+
         {/* Tag Table */}
         <div className="overflow-auto max-h-[300px]">
-          {mockTags.map((tag) => (
+          {filteredTags.map((tag) => (
             <span key={tag.tag_id} className="border-b flex flex-row justify-between">
               <div className="p-2">{tag.tag_name}</div>
               <div className="p-2">

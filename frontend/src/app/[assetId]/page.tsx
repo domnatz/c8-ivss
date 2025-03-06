@@ -5,16 +5,34 @@ import BreadcrumbNav from "./BreadcrumbNav";
 import { Label } from "@/components/ui/label";
 import SubgroupEdit from "./SubgroupEdit";
 import { CubeIcon } from "@heroicons/react/24/outline";
-import { Asset, mockAssets } from "@/components/user/app-sidebar"; // Import mockAssets and Asset type
+import { Asset } from "@/components/user/app-sidebar"; // Import Asset type
+import SubgroupTagEdit from "./SubgroupTagEdit";
+import { useEffect, useState } from "react";
 
 export default function AssetDetails() {
   const params = useParams(); // Get dynamic route parameters
   const { assetId } = params; // Extract the dynamic route parameter
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null); // State to store the selected asset
 
-  // Find the asset based on assetId
-  const selectedAsset = mockAssets.find(
-    (asset) => asset.asset_id === Number(assetId)
-  );
+  // Fetch the asset details based on assetId
+  useEffect(() => {
+    fetch(`http://localhost:8000/assets/${assetId}`)
+      .then((response) => response.json())
+      .then(async (data) => {
+        // Fetch subgroups for the asset
+        const subgroupsResponse = await fetch(`http://localhost:8000/assets/${data.asset_id}/subgroups`);
+        if (subgroupsResponse.ok) {
+          const subgroups = await subgroupsResponse.json();
+          setSelectedAsset({ ...data, subgroups: Array.isArray(subgroups) ? subgroups : [] });
+        } else {
+          setSelectedAsset({ ...data, subgroups: [] });
+        }
+      })
+      .catch((error) => {
+        console.error("There was an error fetching the asset details!", error);
+        setSelectedAsset(null); // Ensure selectedAsset is set to null on error
+      });
+  }, [assetId]);
 
   // If the asset is not found, display a message
   if (!selectedAsset) {
@@ -54,7 +72,7 @@ export default function AssetDetails() {
         {/* Subgroups edit section */}
         <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
           <SubgroupEdit />
-          <SubgroupEdit />
+          <SubgroupTagEdit />
         </div>
       </div>
     </div>
