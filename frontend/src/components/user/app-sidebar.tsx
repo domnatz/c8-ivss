@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation"; 
 import Image from "next/image";
 import { SearchForm } from "@/components/user/search-form";
 import {
@@ -42,19 +43,68 @@ import {
 } from "@/components/ui/sidebar";
 import icon from "../../../public/icon-calibr8.png";
 
+export type Masterlist = {
+  file_id: number;
+  file_name: string;
+}
+export type subgroup_tag = {
+  subgroup_tag_id: number;
+  tag_id: number; // Foreign key from tag table
+  subgroup_id: number; // Foreign key from subgroup table
+  subgroup_tag_name: string; // Name of the tag in the subgroup
+};
+
 // Define the type for a subgroup
-type Subgroup = {
+export type Subgroup = {
   subgroup_id: number;
   subgroup_name: string;
+  subgroup_tags?: subgroup_tag[]; // Optional property
 };
 
 // Define the type for an asset
-type Asset = {
+export type Asset = {
   asset_id: number;
   asset_type: string;
   asset_name: string;
   subgroups: Subgroup[];
 };
+export const mockAssets: Asset[] = [
+  {
+    asset_id: 1,
+    asset_type: "Transformer",
+    asset_name: "Transformer 1",
+    subgroups: [
+      {
+        subgroup_id: 1,
+        subgroup_name: "Temperature Tags",
+        subgroup_tags: [],
+      },
+      {
+        subgroup_id: 2,
+        subgroup_name: "Voltage Tags",
+        subgroup_tags: [],
+      },
+    ],
+  },
+  {
+    asset_id: 2,
+    asset_type: "Transformer",
+    asset_name: "TISTING",
+    subgroups: [
+      {
+        subgroup_id: 3,
+        subgroup_name: "Pressure Tags",
+        subgroup_tags: [],
+      },
+      {
+        subgroup_id: 4,
+        subgroup_name: "Flow Tags",
+        subgroup_tags: [],
+      },
+    ],
+  },
+];
+
 
 // Filter options
 const filterOptions = [
@@ -67,6 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [filter, setFilter] = React.useState("newest");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const router = useRouter(); // Get the router object
 
   // Fetch assets from backend
   React.useEffect(() => {
@@ -285,9 +336,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </Button>
         </div>
 
-        <div className="flex flex-row w-full">
+        <div className="flex flex-row w-full gap-2 px-2">
           <SearchForm
-            className="w-full"
+            className="w-full h-full"
             value={searchQuery}
             onInputChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -312,7 +363,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
 
         {/* Add Assets Button */}
-        <div className="flex justify-between w-full items-center pl-4 py-2 pr-2 border-y-[0.5px] border-zinc-300">
+        <div className="flex justify-between w-full items-center pl-4 pr-2 border-y-[0.5px] border-zinc-300">
           <Label>Assets</Label>
           <Button
             variant="ghost"
@@ -338,7 +389,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 asChild
                 className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
-                <CollapsibleTrigger>
+              <CollapsibleTrigger
+                  onClick={() => {
+                    // Navigate to the asset's page
+                    router.push(`/${asset.asset_id}`);
+                  }}
+                >
                   <div className="flex items-center justify-center">
                     <CubeIcon className="w-5 h-5 pr-1" />
                     <Input
@@ -359,7 +415,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-
                     {/* Add Subgroup Button */}
                     <Button
                       variant="ghost"
