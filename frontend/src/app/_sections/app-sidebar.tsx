@@ -41,44 +41,23 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import icon from "../../../public/icon-calibr8.png";
+import icon from "../../../public/icon_calibr8.png";
+import { Masterlist } from "../models/masterlist";
+import { Asset } from "../models/asset";
+import { Subgroup_tag } from "../models/subgroup-tag";
+import { Subgroup } from "../models/subgroup";
 
-export type Masterlist = {
-  file_id: number;
-  file_name: string;
-};
-export type subgroup_tag = {
-  subgroup_tag_id: number;
-  tag_id: number; // Foreign key from tag table
-  subgroup_id: number; // Foreign key from subgroup table
-  subgroup_tag_name: string; // Name of the tag in the subgroup
-};
-
-// Define the type for a subgroup
-export type Subgroup = {
-  subgroup_id: number;
-  subgroup_name: string;
-  subgroup_tags?: subgroup_tag[]; // Optional property
-};
-
-// Define the type for an asset
-export type Asset = {
-  asset_id: number;
-  asset_type: string;
-  asset_name: string;
-  subgroups: Subgroup[];
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Initialize assets as an empty array with the type Asset[]
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [filter, setFilter] = React.useState("newest");
   const [searchQuery, setSearchQuery] = React.useState("");
-  const router = useRouter(); // Get the router object
+  const router = useRouter(); 
 
   // Fetch assets from backend
   React.useEffect(() => {
-    fetch("http://localhost:8000/assets")
+    fetch(`http://localhost:8000/assets`)
       .then((response) => response.json())
       .then(async (data) => {
         // Fetch subgroups for each asset
@@ -108,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Add asset by calling backend API
   const addAsset = () => {
-    fetch("http://localhost:8000/assets", {
+    fetch(`http://localhost:8000/assets`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -140,7 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const formData = new FormData();
     formData.append("file", file);
 
-    fetch("http://localhost:8000/upload_masterlist", {
+    fetch(`http://localhost:8000/upload_masterlist`, {
       method: "POST",
       body: formData,
     })

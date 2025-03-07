@@ -5,7 +5,7 @@ import BreadcrumbNav from "./BreadcrumbNav";
 import { Label } from "@/components/ui/label";
 import SubgroupEdit from "./SubgroupEdit";
 import { CubeIcon } from "@heroicons/react/24/outline";
-import { Asset } from "@/components/user/app-sidebar"; 
+import { Asset } from "@/app/_sections/app-sidebar"; 
 import SubgroupTagEdit from "./SubgroupTagEdit";
 import { useEffect, useState } from "react";
 

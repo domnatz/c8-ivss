@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Subgroup, Asset, subgroup_tag } from "@/components/user/app-sidebar"; // Import types
+import { Subgroup, Asset, subgroup_tag } from "@/app/_sections/app-sidebar"; // Import types
 import { TagDetails, Tags } from "./tagsDetails";
 
 // Mock data for assets and their subgroups

@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Subgroup, Asset, subgroup_tag } from "@/components/user/app-sidebar"; 
+import { Subgroup, Asset, subgroup_tag } from "@/app/_sections/app-sidebar"; 
 import { TagDetails, Tags } from "./tagsDetails";
 
 interface SubgroupEditProps {

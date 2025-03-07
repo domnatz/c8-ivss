@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/user/app-sidebar"
+import { AppSidebar } from "@/app/_sections/app-sidebar"
 
 import "./globals.css";
 
