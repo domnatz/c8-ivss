@@ -5,22 +5,29 @@ import BreadcrumbNav from "./BreadcrumbNav";
 import { Label } from "@/components/ui/label";
 import SubgroupEdit from "./SubgroupEdit";
 import { CubeIcon } from "@heroicons/react/24/outline";
-import { Asset } from "@/components/user/app-sidebar"; // Import Asset type
+import { Asset } from "@/components/user/app-sidebar"; 
 import SubgroupTagEdit from "./SubgroupTagEdit";
 import { useEffect, useState } from "react";
 
 export default function AssetDetails() {
-  const params = useParams(); // Get dynamic route parameters
-  const { assetId } = params; // Extract the dynamic route parameter
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null); // State to store the selected asset
+  const params = useParams(); 
+  const numericAssetId = Number(params.assetId); // Convert assetId to a number
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null); 
 
-  // Fetch the asset details based on assetId
   useEffect(() => {
-    fetch(`http://localhost:8000/assets/${assetId}`)
-      .then((response) => response.json())
+    if (!numericAssetId) return; // Prevent fetch if assetId is invalid
+
+    // Fetch the asset details
+    fetch(`http://localhost:8000/assets/${numericAssetId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Error fetching asset details: ${response.statusText}`);
+        }
+        return response.json();
+      })
       .then(async (data) => {
         // Fetch subgroups for the asset
-        const subgroupsResponse = await fetch(`http://localhost:8000/assets/${data.asset_id}/subgroups`);
+        const subgroupsResponse = await fetch(`http://localhost:8000/assets/${numericAssetId}/subgroups`);
         if (subgroupsResponse.ok) {
           const subgroups = await subgroupsResponse.json();
           setSelectedAsset({ ...data, subgroups: Array.isArray(subgroups) ? subgroups : [] });
@@ -29,12 +36,11 @@ export default function AssetDetails() {
         }
       })
       .catch((error) => {
-        console.error("There was an error fetching the asset details!", error);
-        setSelectedAsset(null); // Ensure selectedAsset is set to null on error
+        console.error("Error fetching asset details!", error);
+        setSelectedAsset(null);
       });
-  }, [assetId]);
+  }, [numericAssetId]);
 
-  // If the asset is not found, display a message
   if (!selectedAsset) {
     return (
       <div className="px-6 py-4 w-full h-full">
@@ -53,14 +59,11 @@ export default function AssetDetails() {
       <div className="flex flex-col gap-2 w-full h-full">
         <span className="flex flex-row gap-1 font-medium items-center">
           <CubeIcon className="w-5 h-5" />
-          {selectedAsset.asset_name} 
+          {selectedAsset.asset_name}
         </span>
         <span className="flex flex-col gap-2">
           <BreadcrumbNav />
-          <Label
-            htmlFor="subgroupsEdit"
-            className="flex flex-col gap-1 justify-start text-left mt-2 w-full"
-          >
+          <Label htmlFor="subgroupsEdit" className="flex flex-col gap-1 justify-start text-left mt-2 w-full">
             <span className="justify-start text-left flex flex-row w-full">
               Subgroups
             </span>
@@ -69,9 +72,8 @@ export default function AssetDetails() {
             </span>
           </Label>
         </span>
-        {/* Subgroups edit section */}
         <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
-          <SubgroupEdit />
+          <SubgroupEdit selectedAsset={selectedAsset} />
           <SubgroupTagEdit />
         </div>
       </div>

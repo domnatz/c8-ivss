@@ -19,7 +19,7 @@ app = FastAPI(on_startup=[init_models])
 
 # CORS configuration
 origins = [
-    "http://localhost:3000",  # Allow requests from this origin
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
@@ -47,6 +47,7 @@ async def get_assets(db: AsyncSession = Depends(get_db)):
 
 @app.get("/assets/{asset_id}")
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
+    print(f"Fetching asset with asset_id: {asset_id}")
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
     asset = result.scalars().first()
     if not asset:
@@ -55,23 +56,28 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
         "asset_id": asset.asset_id,
         "asset_name": asset.asset_name,
         "asset_type": asset.asset_type,
-        # Include other asset fields as needed
     }
 
 @app.get("/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
+    print(f"Fetching subgroups for asset_id: {asset_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
     if not subgroups:
+        print(f"No subgroups found for asset_id: {asset_id}")
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
+    print(f"Found subgroups: {subgroups}")
     return subgroups
 
 @app.get("/subgroups/{subgroup_id}")
 async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    print(f"Fetching subgroup for subgroup_id: {subgroup_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
     subgroup = result.scalars().first()
     if not subgroup:
+        print(f"No subgroup found for subgroup_id: {subgroup_id}")
         raise HTTPException(status_code=404, detail="Subgroup not found")
+    print(f"Found subgroup: {subgroup}")
     return subgroup
 
 class AssetCreate(BaseModel):
@@ -144,28 +150,25 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
-        tags_column = "tags"  # Default column name for tags
+        tags_column = "tags"
         content = await file.read()
 
-        # Process CSV files
         if file.filename.endswith('.csv'):
             content_str = content.decode("utf-8")
             reader = csv.DictReader(StringIO(content_str))
 
-            async with db.begin():  # Ensures atomic transactions
+            async with db.begin():
                 for row in reader:
                     masterlist = models.MasterList(file_name=row.get('file_name', 'Unknown'))
                     db.add(masterlist)
-                    await db.flush()  # Get the masterlist ID before commit
+                    await db.flush()
                     
-                    # Extract and store tags
                     if tags_column in row:
                         tags = row[tags_column].split(',')
                         for tag_name in tags:
                             tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.file_id)
                             db.add(tag)
 
-        # Process Excel files
         else:
             workbook = load_workbook(filename=BytesIO(content))
             sheet = workbook.active
@@ -175,13 +178,12 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
             if tags_idx is None:
                 raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
 
-            async with db.begin():  # Ensures atomic transactions
+            async with db.begin():
                 for row in sheet.iter_rows(min_row=2, values_only=True):
                     masterlist = models.MasterList(file_name=row[0] or 'Unknown')
                     db.add(masterlist)
                     await db.flush()
 
-                    # Extract and store tags
                     tags = row[tags_idx].split(',')
                     for tag_name in tags:
                         tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.file_id)
