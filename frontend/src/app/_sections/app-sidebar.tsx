@@ -40,197 +40,46 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import icon from "../../../public/icon_calibr8.png";
-import { Masterlist } from "../models/masterlist";
-import { Asset } from "../models/asset";
-import { Subgroup_tag } from "../models/subgroup-tag";
-import { Subgroup } from "../models/subgroup";
-
+import { Asset } from "../../models/asset";
+import {
+  createAsset,
+  createSubgroup,
+  updateAssetName,
+  updateSubgroupName,
+} from "@/_actions/asset-actions";
+import {
+  filterOptions,
+  getAssets,
+  uploadMasterlist,
+} from "@/_services/asset-service";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { state } = useSidebar();
+
   // Initialize assets as an empty array with the type Asset[]
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [filter, setFilter] = React.useState("newest");
   const [searchQuery, setSearchQuery] = React.useState("");
-  const router = useRouter(); 
+  const router = useRouter();
 
   // Fetch assets from backend
-  React.useEffect(() => {
-    fetch(`http://localhost:8000/assets`)
-      .then((response) => response.json())
-      .then(async (data) => {
-        // Fetch subgroups for each asset
-        const assetsWithSubgroups = await Promise.all(
-          data.map(async (asset: Asset) => {
-            try {
-              const subgroupsResponse = await fetch(`http://localhost:8000/assets/${asset.asset_id}/subgroups`);
-              if (subgroupsResponse.ok) {
-                const subgroups = await subgroupsResponse.json();
-                return { ...asset, subgroups: Array.isArray(subgroups) ? subgroups : [] };
-              } else {
-                return { ...asset, subgroups: [] };
-              }
-            } catch (error) {
-              console.error(`Error fetching subgroups for asset ${asset.asset_id}:`, error);
-              return { ...asset, subgroups: [] };
-            }
-          })
-        );
-        setAssets(assetsWithSubgroups);
-      })
-      .catch((error) => {
-        console.error("There was an error fetching the assets!", error);
-        setAssets([]); // Ensure assets is set to an empty array on error
-      });
+  const fetchAssets = React.useCallback(async () => {
+    try {
+      const assetsData = await getAssets();
+      setAssets(assetsData);
+    } catch (error) {
+      console.error("There was an error fetching the assets!", error);
+      setAssets([]);
+    }
   }, []);
 
-  // Add asset by calling backend API
-  const addAsset = () => {
-    fetch(`http://localhost:8000/assets`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        asset_name: `New Asset`,
-        asset_type: "unclassified",
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) =>
-        setAssets((prevAssets) => [
-          ...(prevAssets || []),
-          { ...data, subgroups: [] },
-        ])
-      )
-      .catch((error) => {
-        console.error("There was an error adding the asset!", error);
-      });
-  };
-
-  const filterOptions = [
-    { label: "Newest Added", value: "newest" },
-    { label: "Oldest", value: "oldest" },
-  ];
-
-  // Upload masterlist by calling backend API
-  const uploadMasterlist = (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    fetch(`http://localhost:8000/upload_masterlist`, {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Masterlist uploaded successfully!", data);
-        // Refresh assets if necessary
-      })
-      .catch((error) => {
-        console.error("There was an error uploading the masterlist!", error);
-      });
-  };
-
-  // Add subgroup to asset by calling backend API
-  const addSubgroup = (asset_id: number) => {
-    const payload = {
-      subgroup_name: `New Subgroup`, // Only include subgroup_name
-    };
-
-    console.log("Sending payload:", payload); // Log the payload
-
-    fetch(`http://localhost:8000/assets/${asset_id}/subgroups`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          return response.json().then((errorData) => {
-            console.error("Server error details:", errorData); // Log server error details
-            throw new Error(`Failed to add subgroup: ${JSON.stringify(errorData)}`);
-          });
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Subgroup added successfully:", data); // Log success
-        const updatedAssets = (assets || []).map((asset) => {
-          if (asset.asset_id === asset_id) {
-            return { ...asset, subgroups: [...(asset.subgroups || []), data] };
-          }
-          return asset;
-        });
-        setAssets(updatedAssets);
-      })
-      .catch((error) => {
-        console.error("There was an error adding the subgroup!", error);
-      });
-  };
-
-  // Rename subgroup by calling backend API
-  const renameSubgroup = (
-    asset_id: number,
-    subgroup_id: number,
-    newName: string
-  ) => {
-    fetch(`http://localhost:8000/subgroups/${subgroup_id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        subgroup_name: newName,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        const updatedAssets = (assets || []).map((asset) => {
-          if (asset.asset_id === asset_id) {
-            return {
-              ...asset,
-              subgroups: asset.subgroups.map((subgroup) =>
-                subgroup.subgroup_id === subgroup_id
-                  ? { ...subgroup, subgroup_name: newName }
-                  : subgroup
-              ),
-            };
-          }
-          return asset;
-        });
-        setAssets(updatedAssets);
-      })
-      .catch((error) => {
-        console.error("There was an error renaming the subgroup!", error);
-      });
-  };
-
-  // Rename asset by calling backend API
-  const renameAsset = (asset_id: number, newTitle: string) => {
-    fetch(`http://localhost:8000/assets/${asset_id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        asset_name: newTitle,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        const updatedAssets = (assets || []).map((asset) =>
-          asset.asset_id === asset_id ? { ...asset, asset_name: newTitle } : asset
-        );
-        setAssets(updatedAssets);
-      })
-      .catch((error) => {
-        console.error("There was an error renaming the asset!", error);
-      });
-  };
+  React.useEffect(() => {
+    fetchAssets();
+  }, [fetchAssets]);
 
   const sortAssets = (assets: Asset[], filter: string) => {
     switch (filter) {
@@ -248,15 +97,59 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     asset.asset_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleAddAsset = async () => {
+    await createAsset();
+    fetchAssets(); // Refresh assets after adding
+  };
+
+  const handleAddSubgroup = async (assetId: number) => {
+    await createSubgroup(assetId);
+    fetchAssets(); // Refresh assets after adding subgroup
+  };
+
+  const handleRenameAsset = async (assetId: number, newName: string) => {
+    await updateAssetName(assetId, newName);
+    fetchAssets(); // Refresh assets after renaming
+  };
+
+  const handleRenameSubgroup = async (
+    assetId: number,
+    subgroupId: number,
+    newName: string
+  ) => {
+    await updateSubgroupName(assetId, subgroupId, newName);
+    fetchAssets(); // Refresh assets after renaming subgroup
+  };
+
+  const handleUploadMasterlist = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await uploadMasterlist(file);
+      const data = await response.json();
+      console.log("Masterlist uploaded successfully!", data);
+      fetchAssets(); // Refresh assets after upload
+    } catch (error) {
+      console.error("There was an error uploading the masterlist!", error);
+    }
+  };
+
   return (
     <Sidebar {...props}>
       <SidebarHeader className="p-0">
         <div className="flex gap-2 w-full p-4 align-top">
-          <Image src={icon} alt="Calibr8 Logo" className="w-10 rounded-full border-zinc-400 border" />
-          <span className="flex flex-col">
-            <span className="font-semibold">Calibr8</span>
-            <span className="font-light text-xs">Philippines</span>
-          </span>
+          <div className="flex-row flex gap-2">
+            <Image
+              src={icon}
+              alt="Calibr8 Logo"
+              className="w-10 rounded-full border-zinc-400 border"
+            />
+            <span className="flex flex-col">
+              <span className="font-semibold">Calibr8</span>
+              <span className="font-light text-xs">Philippines</span>
+            </span>
+          </div>
         </div>
 
         <div className="p-2 border-b-[0.5px] items-start flex flex-col gap-2 justify-between">
@@ -267,7 +160,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             id="masterlist"
             onChange={(e) => {
               if (e.target.files) {
-                uploadMasterlist(e.target.files[0]);
+                handleUploadMasterlist(e.target.files[0]);
               }
             }}
           />
@@ -310,7 +203,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             variant="ghost"
             size="sm"
             className="hover:text-foreground/50 cursor-pointer"
-            onClick={addAsset}
+            onClick={handleAddAsset}
           >
             <PlusIcon className="w-5 h-5" />
           </Button>
@@ -340,7 +233,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <CubeIcon className="w-5 h-5 pr-1" />
                     <Input
                       value={asset.asset_name}
-                      onChange={(e) => renameAsset(asset.asset_id, e.target.value)}
+                      onChange={(e) =>
+                        handleRenameAsset(asset.asset_id, e.target.value)
+                      }
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           (e.target as HTMLInputElement).blur();
@@ -361,34 +256,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       variant="ghost"
                       size="sm"
                       className="justify-between text-xs"
-                      onClick={() => addSubgroup(asset.asset_id)} // Pass the asset_id to the function
+                      onClick={() => handleAddSubgroup(asset.asset_id)} // Pass the asset_id to the function
                     >
                       <span>Add Subgroup</span>
                       <PlusCircleIcon className="w-5 h-5" />
                     </Button>
-                    {Array.isArray(asset.subgroups) && asset.subgroups.map((subgroup, subIndex) => (
-                      <SidebarMenuItem key={subgroup.subgroup_id} className="pl-6">
-                        <SidebarMenuButton asChild>
-                          <div className="flex items-center justify-start w-full">
-                            <ArrowTurnDownRightIcon className="w-5 h-5" />
-                            <Input
-                              value={subgroup.subgroup_name}
-                              onChange={(e) =>
-                                renameSubgroup(asset.asset_id, subgroup.subgroup_id, e.target.value)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  (e.target as HTMLInputElement).blur();
+                    {Array.isArray(asset.subgroups) &&
+                      asset.subgroups.map((subgroup, subIndex) => (
+                        <SidebarMenuItem
+                          key={subgroup.subgroup_id}
+                          className="pl-6"
+                        >
+                          <SidebarMenuButton asChild>
+                            <div className="flex items-center justify-start w-full">
+                              <ArrowTurnDownRightIcon className="w-5 h-5" />
+                              <Input
+                                value={subgroup.subgroup_name}
+                                onChange={(e) =>
+                                  handleRenameSubgroup(
+                                    asset.asset_id,
+                                    subgroup.subgroup_id,
+                                    e.target.value
+                                  )
                                 }
-                              }}
-                              className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium"
-                              onClick={(e) => e.stopPropagation()} // Prevent CollapsibleTrigger from toggling
-                            />
-                          </div>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                    ...
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                }}
+                                className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium"
+                                onClick={(e) => e.stopPropagation()} // Prevent CollapsibleTrigger from toggling
+                              />
+                            </div>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </CollapsibleContent>

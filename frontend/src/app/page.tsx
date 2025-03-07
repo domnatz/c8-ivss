@@ -1,9 +1,5 @@
-import Image from "next/image";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return (
-    <div className="px-6 py-4">
-        Test
-    </div>
-  );
+  return redirect("/123");
 }

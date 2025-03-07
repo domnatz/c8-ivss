@@ -5,5 +5,5 @@ export interface Tags {
   file_id: Masterlist; // Foreign key referencing Masterlist.file_id
   tag_type: "classified" | "unclassified"; // Classification field
   tag_name: string;
-  tag_data: Record<string, unknown>; // JSON data type
-};
+  tag_data?: Record<string, unknown>; // JSON data type
+}
