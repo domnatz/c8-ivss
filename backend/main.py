@@ -51,7 +51,12 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     asset = result.scalars().first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-    return asset
+    return {
+        "asset_id": asset.asset_id,
+        "asset_name": asset.asset_name,
+        "asset_type": asset.asset_type,
+        # Include other asset fields as needed
+    }
 
 @app.get("/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):

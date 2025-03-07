@@ -53,7 +53,7 @@ export default function AssetDetails() {
       <div className="flex flex-col gap-2 w-full h-full">
         <span className="flex flex-row gap-1 font-medium items-center">
           <CubeIcon className="w-5 h-5" />
-          {selectedAsset.asset_name} {/* Display the asset name */}
+          {selectedAsset.asset_name} 
         </span>
         <span className="flex flex-col gap-2">
           <BreadcrumbNav />
