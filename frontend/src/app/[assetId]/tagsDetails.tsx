@@ -1,22 +1,9 @@
-"use client";
-
-import { Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Masterlist } from "@/components/user/app-sidebar";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import { SearchForm } from "@/components/user/search-form";
+import { PlusCircleIcon } from "@heroicons/react/24/outline";
 
 export type Tags = {
   tag_id: number;
@@ -26,41 +13,35 @@ export type Tags = {
   tag_data: Record<string, unknown>; // JSON data type
 };
 
-// Mock tags data
-const mockTags: Tags[] = [
-  {
-    tag_id: 1,
-    file_id: 101,
-    tag_type: "classified",
-    tag_name: "Tag 1",
-    tag_data: { value: 100, unit: "°C" }, // JSON data
-  },
-  {
-    tag_id: 2,
-    file_id: 102,
-    tag_type: "unclassified",
-    tag_name: "Tag 2",
-    tag_data: { value: 220, unit: "V" }, // JSON data
-  },
-  {
-    tag_id: 3,
-    file_id: 103,
-    tag_type: "classified",
-    tag_name: "Tag 3",
-    tag_data: { value: 50, unit: "psi" }, // JSON data
-  },
-];
-
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
 }
 
 export function TagDetails({ onAddTag }: TagDetailsProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [tags, setTags] = useState<Tags[]>([]);
+  const [fileId, setFileId] = useState<number | null>(null);
 
-  const filteredTags = mockTags.filter((tag) =>
-    tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    // Fetch the latest uploaded masterlist
+    fetch(`http://localhost:8000/masterlist/latest`)
+      .then((response) => response.json())
+      .then((data) => {
+        setFileId(data.file_id);
+      })
+      .catch((error) => console.error("Error fetching latest masterlist:", error));
+  }, []);
+
+  useEffect(() => {
+    if (fileId) {
+      fetch(`http://localhost:8000/tags/${fileId}`)
+        .then((response) => response.json())
+        .then((data) => setTags(data))
+        .catch((error) => console.error("Error fetching tags:", error));
+    }
+  }, [fileId]);
+
+  const filteredTags = tags.filter((tag) => tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <Dialog>
@@ -75,28 +56,14 @@ export function TagDetails({ onAddTag }: TagDetailsProps) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Search Form */}
+        <SearchForm value={searchQuery} onInputChange={(e) => setSearchQuery(e.target.value)} placeholder="Filter tags..." />
 
-          <SearchForm
-            value={searchQuery}
-            onInputChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter tags..."
-          />
-
-
-        {/* Tag Table */}
         <div className="overflow-auto max-h-[300px]">
           {filteredTags.map((tag) => (
             <span key={tag.tag_id} className="border-b flex flex-row justify-between">
               <div className="p-2">{tag.tag_name}</div>
               <div className="p-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    onAddTag(tag);
-                  }}
-                >
+                <Button size="sm" variant="ghost" onClick={() => onAddTag(tag)}>
                   <PlusCircleIcon className="w-5 h-5" />
                   Add
                 </Button>
