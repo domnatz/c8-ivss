@@ -9,23 +9,28 @@ export const assetSlice = createSlice({
   initialState,
   reducers: {
     setAsset: (state, action: PayloadAction<Asset>) => {
-      return action.payload;
+      return { ...state, ...action.payload };
     },
 
     addSubgroup: (state, action: PayloadAction<Subgroup>) => {
-      state.subgroups?.push(action.payload);
+      return {
+        ...state,
+        subgroups: [...(state.subgroups || []), action.payload],
+      };
     },
 
     updateSubgroupName: (
       state,
       action: PayloadAction<{ id: number; name: string }>
     ) => {
-      const subgroup = state.subgroups?.find(
-        (s) => s.subgroup_id === action.payload.id
-      );
-      if (subgroup) {
-        subgroup.subgroup_name = action.payload.name;
-      }
+      return {
+        ...state,
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === action.payload.id
+            ? { ...subgroup, subgroup_name: action.payload.name }
+            : subgroup
+        ),
+      };
     },
 
     addTagToSubgroup: (
@@ -36,20 +41,21 @@ export const assetSlice = createSlice({
       }>
     ) => {
       const { subgroupId, tag } = action.payload;
-      const subgroup = state.subgroups?.find(
-        (s) => s.subgroup_id === subgroupId
-      );
-      if (subgroup) {
-        if (!subgroup.subgroup_tags) {
-          subgroup.subgroup_tags = [];
-        }
-        subgroup.subgroup_tags.push(tag);
-      }
+      return {
+        ...state,
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === subgroupId
+            ? {
+                ...subgroup,
+                subgroup_tags: [...(subgroup.subgroup_tags || []), tag],
+              }
+            : subgroup
+        ),
+      };
     },
   },
 });
 
-export const { setAsset, addSubgroup, updateSubgroupName, addTagToSubgroup } =
-  assetSlice.actions;
+export const assetAction = assetSlice.actions;
 
 export default assetSlice.reducer;

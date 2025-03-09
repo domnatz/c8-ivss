@@ -9,7 +9,7 @@ import {
 } from "@/_services/asset-service";
 import { revalidatePath } from "next/cache";
 
-export async function createAsset() {
+export async function createAsset(_prevState: any = null) {
   const asset_name = "New Asset";
   const asset_type = "Unclassified";
 
@@ -24,7 +24,7 @@ export async function createAsset() {
   }
 }
 
-export async function createSubgroup(assetId: number) {
+export async function createSubgroup(assetId: number, _prevState: any = null) {
   try {
     const response = await addSubgroup(assetId);
     await response.json();
@@ -36,7 +36,10 @@ export async function createSubgroup(assetId: number) {
   }
 }
 
-export async function updateAssetName(assetId: number, newName: string) {
+export async function updateAssetName(
+  { assetId, newName }: { assetId: number; newName: string },
+  _prevState: any = null
+) {
   try {
     const response = await renameAsset(assetId, newName);
     await response.json();
@@ -49,9 +52,12 @@ export async function updateAssetName(assetId: number, newName: string) {
 }
 
 export async function updateSubgroupName(
-  assetId: number,
-  subgroupId: number,
-  newName: string
+  {
+    assetId,
+    subgroupId,
+    newName,
+  }: { assetId: number; subgroupId: number; newName: string },
+  _prevState: any = null
 ) {
   try {
     const response = await renameSubgroup(subgroupId, newName);
@@ -64,9 +70,11 @@ export async function updateSubgroupName(
   }
 }
 
-export async function uploadMasterlistFile(formData: FormData) {
+export async function uploadMasterlistFile(file: File, _prevState: any = null) {
   try {
-    const file = formData.get("file") as File;
+    if (!file) {
+      return { success: false, error: "No file provided" };
+    }
     const response = await uploadMasterlist(file);
     await response.json();
     revalidatePath("/");
