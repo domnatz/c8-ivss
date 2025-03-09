@@ -22,32 +22,32 @@ export const rootSlice = createSlice({
         menuOpen: !state.menuOpen,
       };
     },
-    setAssets(state: RootState, action: PayloadAction<Asset[]>) {
+    assetsSet(state: RootState, action: PayloadAction<Asset[]>) {
       return {
         ...state,
         assets: action.payload,
       };
     },
-    setFilter(state: RootState, action: PayloadAction<string>) {
+    filterSet(state: RootState, action: PayloadAction<string>) {
       return {
         ...state,
         filter: action.payload,
       };
     },
-    setSearchQuery(state: RootState, action: PayloadAction<string>) {
+    searchQuerySet(state: RootState, action: PayloadAction<string>) {
       return {
         ...state,
         searchQuery: action.payload,
       };
     },
     // New reducers for editing state
-    setEditingAssetId(state: RootState, action: PayloadAction<number | null>) {
+    editingAssetIdSet(state: RootState, action: PayloadAction<number | null>) {
       return {
         ...state,
         editingAssetId: action.payload,
       };
     },
-    setEditingSubgroupId(
+    editingSubgroupIdSet(
       state: RootState,
       action: PayloadAction<string | null>
     ) {
@@ -56,7 +56,7 @@ export const rootSlice = createSlice({
         editingSubgroupId: action.payload,
       };
     },
-    updateEditingValue(
+    editingValueChanged(
       state: RootState,
       action: PayloadAction<{ key: string; value: string }>
     ) {
@@ -68,7 +68,7 @@ export const rootSlice = createSlice({
         },
       };
     },
-    clearEditing(state: RootState) {
+    editingCleared(state: RootState) {
       const newValues = { ...state.editingValues };
       Object.keys(newValues).forEach((key) => {
         if (key.startsWith("asset-") || key.startsWith("subgroup-")) {

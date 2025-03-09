@@ -43,14 +43,14 @@ export function AssetItem({
 
   const handleAssetInputChange = (value: string) => {
     dispatch(
-      rootActions.updateEditingValue({
+      rootActions.editingValueChanged({
         key: `asset-${asset.asset_id}`,
         value,
       })
     );
 
     if (editingAssetId !== asset.asset_id) {
-      dispatch(rootActions.setEditingAssetId(asset.asset_id));
+      dispatch(rootActions.editingAssetIdSet(asset.asset_id));
     }
   };
 
@@ -80,7 +80,7 @@ export function AssetItem({
         } catch (error) {
           toast.error("An error occurred while renaming the asset");
         } finally {
-          dispatch(rootActions.clearEditing());
+          dispatch(rootActions.editingCleared());
         }
       });
     }
@@ -131,19 +131,19 @@ export function AssetItem({
                       if (e.key === "Enter") {
                         handleSubmitAssetRename();
                       } else if (e.key === "Escape") {
-                        dispatch(rootActions.clearEditing());
+                        dispatch(rootActions.editingCleared());
                       }
                     }}
                     onFocus={() => {
                       if (!editingValues[`asset-${asset.asset_id}`]) {
                         dispatch(
-                          rootActions.updateEditingValue({
+                          rootActions.editingValueChanged({
                             key: `asset-${asset.asset_id}`,
                             value: asset.asset_name,
                           })
                         );
                       }
-                      dispatch(rootActions.setEditingAssetId(asset.asset_id));
+                      dispatch(rootActions.editingAssetIdSet(asset.asset_id));
                     }}
                     className={`border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 ${
                       isOpen ? "text-[#FF5B1A] font-medium" : ""

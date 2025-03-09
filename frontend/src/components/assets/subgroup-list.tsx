@@ -54,14 +54,14 @@ export function SubgroupList({
   const handleSubgroupInputChange = (subgroupId: number, value: string) => {
     const key = `subgroup-${assetId}-${subgroupId}`;
     dispatch(
-      rootActions.updateEditingValue({
+      rootActions.editingValueChanged({
         key,
         value,
       })
     );
 
     if (editingSubgroupId !== `${assetId}-${subgroupId}`) {
-      dispatch(rootActions.setEditingSubgroupId(`${assetId}-${subgroupId}`));
+      dispatch(rootActions.editingSubgroupIdSet(`${assetId}-${subgroupId}`));
     }
   };
 
@@ -94,7 +94,7 @@ export function SubgroupList({
         } catch (error) {
           toast.error("An error occurred while renaming the subgroup");
         } finally {
-          dispatch(rootActions.clearEditing());
+          dispatch(rootActions.editingCleared());
         }
       });
     }
@@ -140,19 +140,19 @@ export function SubgroupList({
                         if (e.key === "Enter") {
                           handleSubmitSubgroupRename(subgroup.subgroup_id);
                         } else if (e.key === "Escape") {
-                          dispatch(rootActions.clearEditing());
+                          dispatch(rootActions.editingCleared());
                         }
                       }}
                       onFocus={() => {
                         if (!editingValues[`subgroup-${subgroupKey}`]) {
                           dispatch(
-                            rootActions.updateEditingValue({
+                            rootActions.editingValueChanged({
                               key: `subgroup-${subgroupKey}`,
                               value: subgroup.subgroup_name,
                             })
                           );
                         }
-                        dispatch(rootActions.setEditingSubgroupId(subgroupKey));
+                        dispatch(rootActions.editingSubgroupIdSet(subgroupKey));
                       }}
                       className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium"
                       onClick={(e) => e.stopPropagation()}

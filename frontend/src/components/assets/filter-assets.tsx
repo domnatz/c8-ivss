@@ -28,7 +28,7 @@ export function FilterAssets({ className }: FilterAssetsProps) {
         className="w-full h-full"
         value={state.searchQuery}
         onInputChange={(e) =>
-          dispatch(rootActions.setSearchQuery(e.target.value))
+          dispatch(rootActions.searchQuerySet(e.target.value))
         }
       />
 
@@ -42,7 +42,7 @@ export function FilterAssets({ className }: FilterAssetsProps) {
           {filterOptions.map((option) => (
             <DropdownMenuItem
               key={option.value}
-              onSelect={() => dispatch(rootActions.setFilter(option.value))}
+              onSelect={() => dispatch(rootActions.filterSet(option.value))}
             >
               {option.label}
             </DropdownMenuItem>

@@ -25,11 +25,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const fetchAssets = useCallback(() => {
     getAssets()
       .then((data) => {
-        dispatch(rootActions.setAssets(data));
+        dispatch(rootActions.assetsSet(data));
       })
       .catch((error) => {
         console.error("There was an error fetching the assets!", error);
-        dispatch(rootActions.setAssets([]));
+        dispatch(rootActions.assetsSet([]));
       });
   }, [dispatch]);
 
