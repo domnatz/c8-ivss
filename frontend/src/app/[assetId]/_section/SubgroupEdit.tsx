@@ -224,9 +224,6 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroup ? (
           <div>
-            <h2 className="text-lg font-bold mb-4">
-              {selectedSubgroup.subgroup_name}
-            </h2>
             {filteredTags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {filteredTags.map((tag) => (

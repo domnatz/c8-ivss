@@ -104,7 +104,7 @@ export function AssetItem({
       onOpenChange={() => onToggle(asset.asset_id)}
       className="group/collapsible border-b-[0.5px] border-zinc-300"
     >
-      <SidebarGroup className="py-0">
+      <SidebarGroup className="px-0 py-0">
         <SidebarGroupLabel
           asChild
           className={`group/label text-sm text-sidebar-foreground`}
@@ -162,7 +162,7 @@ export function AssetItem({
                 </div>
               </div>
               <ChevronRight
-                className={`ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90 ${
+                className={`ml-auto w-5 h-5 transition-transform group-data-[state=open]/collapsible:rotate-90 ${
                   isOpen ? "text-[#FF5B1A]" : ""
                 }`}
               />
