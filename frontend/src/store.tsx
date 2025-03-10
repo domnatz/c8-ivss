@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import rootSlice from "./app/_redux/root-slice";
+import assetSlice from "./app/[assetId]/_redux/asset-slice";
 
 export const store = configureStore({
   reducer: {
     rootState: rootSlice,
+    assetState: assetSlice,
   },
 });
 

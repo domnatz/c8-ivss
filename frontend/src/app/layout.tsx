@@ -1,8 +1,4 @@
-import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/app/_sections/app-sidebar";
-
 import "./globals.css";
 import Providers from "./_sections/providers";
 import { Bounce, ToastContainer } from "react-toastify";
