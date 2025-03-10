@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import * as XLSX from 'xlsx';
-import Papa from 'papaparse';
+import { uploadTags } from "@/services/tag-service";
 
 // Unified tag interface that works with the backend
 export interface Tags {
@@ -85,38 +84,16 @@ export function TagDetails({
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const data = e.target?.result;
-        let tags: Tags[] = [];
-        if (file.name.endsWith('.csv')) {
-          Papa.parse(data as string, {
-            header: true,
-            complete: (results) => {
-              tags = results.data as Tags[];
-            },
-          });
-        } else if (file.name.endsWith('.xlsx')) {
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          tags = XLSX.utils.sheet_to_json(sheet) as Tags[];
-        }
-        // Send tags to backend
-        const response = await fetch('http://localhost:8000/upload_masterlist', {
-          method: 'POST',
-          body: JSON.stringify(tags),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        if (response.ok) {
-          toast.success("Tags uploaded successfully");
+      try {
+        await uploadTags(file);
+        toast.success("Tags uploaded successfully");
+      } catch (error) {
+        if (error instanceof Error) {
+          toast.error(error.message);
         } else {
-          toast.error("Failed to upload tags");
+          toast.error("An unknown error occurred");
         }
-      };
-      reader.readAsBinaryString(file);
+      }
     }
   };
 
