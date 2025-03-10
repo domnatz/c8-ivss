@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import {
-  PlusCircleIcon,
+  PlusIcon,
   ArrowTurnDownRightIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
@@ -105,12 +105,12 @@ export function SubgroupList({
       <Button
         variant="ghost"
         size="sm"
-        className="justify-between text-xs"
+        className="justify-between text-xs rounded-none border-b-1 mx-2"
         onClick={handleAddSubgroup}
         disabled={isPending}
       >
-        <span>Add Subgroup</span>
-        <PlusCircleIcon className="w-5 h-5" />
+        <span>Subgroups</span>
+        <PlusIcon className="w-5 h-5" />
       </Button>
 
       {Array.isArray(subgroups) &&

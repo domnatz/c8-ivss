@@ -45,7 +45,7 @@ export default function AssetDetails() {
 
   if (error || !selectedAsset) {
     return (
-      <div className="px-6 py-4 w-full h-full">
+      <div className="py-4 w-full h-full">
         <div className="flex flex-col gap-2 w-full h-full">
           <span className="flex flex-row gap-1 font-medium items-center">
             <CubeIcon className="w-5 h-5" />
@@ -57,7 +57,7 @@ export default function AssetDetails() {
   }
 
   return (
-    <div className="px-6 py-4 w-full h-full">
+    <div className="py-4 w-full h-full">
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
         <SubgroupEdit selectedAsset={selectedAsset} />
         {/* <SubgroupTagEdit /> */}
