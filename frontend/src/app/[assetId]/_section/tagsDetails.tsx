@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 // Unified tag interface that works with the backend
 export interface Tags {
@@ -25,55 +27,6 @@ export interface Tags {
   tag_data?: Record<string, unknown>;
 }
 
-// Mock tag data for development and testing
-const mockTags: Tags[] = [
-  {
-    tag_id: 1,
-    tag_name: "Temperature",
-    description: "Temperature reading",
-    units: "°C",
-  },
-  {
-    tag_id: 2,
-    tag_name: "Pressure",
-    description: "Pressure reading",
-    units: "kPa",
-  },
-  { tag_id: 3, tag_name: "Flow", description: "Flow rate", units: "m³/s" },
-  { tag_id: 4, tag_name: "Level", description: "Fluid level", units: "m" },
-  {
-    tag_id: 5,
-    tag_name: "Voltage",
-    description: "Electrical voltage",
-    units: "V",
-  },
-  {
-    tag_id: 6,
-    tag_name: "Current",
-    description: "Electrical current",
-    units: "A",
-  },
-  { tag_id: 7, tag_name: "Power", description: "Electrical power", units: "W" },
-  {
-    tag_id: 8,
-    tag_name: "Frequency",
-    description: "Electrical frequency",
-    units: "Hz",
-  },
-  {
-    tag_id: 9,
-    tag_name: "Humidity",
-    description: "Relative humidity",
-    units: "%",
-  },
-  {
-    tag_id: 10,
-    tag_name: "Speed",
-    description: "Rotational speed",
-    units: "RPM",
-  },
-];
-
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
   buttonText?: string;
@@ -85,25 +38,25 @@ export function TagDetails({
 }: TagDetailsProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [tags, setTags] = React.useState<Tags[]>(mockTags);
+  const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // Fetch real tags from API if available
+  // Fetch real tags from API
   React.useEffect(() => {
     const fetchTags = async () => {
       try {
         setLoading(true);
-        // Try to fetch tags from backend, fall back to mock tags if error
         const response = await fetch("http://localhost:8000/tags");
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data) && data.length > 0) {
             setTags(data);
-            return;
+          } else {
+            console.log("No tags found");
           }
+        } else {
+          console.error("Failed to fetch tags");
         }
-        // If we get here, either the response wasn't ok or the data wasn't valid
-        console.log("Using mock tag data instead of API data");
       } catch (error) {
         console.error("Error fetching tags:", error);
       } finally {
@@ -129,6 +82,44 @@ export function TagDetails({
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = e.target?.result;
+        let tags: Tags[] = [];
+        if (file.name.endsWith('.csv')) {
+          Papa.parse(data as string, {
+            header: true,
+            complete: (results) => {
+              tags = results.data as Tags[];
+            },
+          });
+        } else if (file.name.endsWith('.xlsx')) {
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          tags = XLSX.utils.sheet_to_json(sheet) as Tags[];
+        }
+        // Send tags to backend
+        const response = await fetch('http://localhost:8000/upload_masterlist', {
+          method: 'POST',
+          body: JSON.stringify(tags),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          toast.success("Tags uploaded successfully");
+        } else {
+          toast.error("Failed to upload tags");
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -150,6 +141,7 @@ export function TagDetails({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <input type="file" onChange={handleFileUpload} />
           <div className="flex flex-col gap-2">
             {loading ? (
               <p className="text-center text-muted-foreground">
