@@ -38,3 +38,23 @@ export const uploadTags = async (file: File): Promise<void> => {
     reader.readAsBinaryString(file);
   });
 };
+
+export const fetchTagsByFileId = async (fileId: number): Promise<Tags[]> => {
+    const response = await fetch(`http://localhost:8000/tags?file_id=${fileId}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data as Tags[];
+    } else {
+      throw new Error('Failed to fetch tags');  
+    }
+  };
+  
+  export const fetchLatestMasterList = async (): Promise<{ file_id: number; file_name: string }> => {
+    const response = await fetch('http://localhost:8000/masterlist/latest');
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    } else {
+      throw new Error('Failed to fetch latest master list');
+    }
+  };

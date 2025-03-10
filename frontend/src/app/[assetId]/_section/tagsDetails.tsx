@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { uploadTags } from "@/_services/tag-service";
+import { fetchTagsByFileId, fetchLatestMasterList } from "@/_services/tag-service";
 
 // Unified tag interface that works with the backend
 export interface Tags {
@@ -39,32 +39,44 @@ export function TagDetails({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [fileId, setFileId] = React.useState<number | null>(null);
 
-  // Fetch real tags from API
+  // Fetch the latest master list file ID and tags from API
   React.useEffect(() => {
-    const fetchTags = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:8000/tags");
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setTags(data);
-          } else {
-            console.log("No tags found");
-          }
-        } else {
-          console.error("Failed to fetch tags");
-        }
+        const latestMasterList = await fetchLatestMasterList();
+        setFileId(latestMasterList.file_id);
+        const data = await fetchTagsByFileId(latestMasterList.file_id);
+        setTags(data);
       } catch (error) {
-        console.error("Error fetching tags:", error);
+        console.error("Error fetching initial data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTags();
+    fetchInitialData();
   }, []);
+
+  // Fetch tags periodically without refreshing the whole modal
+  React.useEffect(() => {
+    const fetchTagsPeriodically = async () => {
+      if (fileId) {
+        try {
+          const data = await fetchTagsByFileId(fileId);
+          setTags(data);
+        } catch (error) {
+          console.error("Error fetching tags:", error);
+        }
+      }
+    };
+
+    const intervalId = setInterval(fetchTagsPeriodically, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  }, [fileId]);
 
   const filteredTags = tags.filter((tag) =>
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -78,22 +90,6 @@ export function TagDetails({
     } catch (error) {
       console.error("Error adding tag:", error);
       toast.error("Failed to add tag");
-    }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      try {
-        await uploadTags(file);
-        toast.success("Tags uploaded successfully");
-      } catch (error) {
-        if (error instanceof Error) {
-          toast.error(error.message);
-        } else {
-          toast.error("An unknown error occurred");
-        }
-      }
     }
   };
 
@@ -118,7 +114,6 @@ export function TagDetails({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <input type="file" onChange={handleFileUpload} />
           <div className="flex flex-col gap-2">
             {loading ? (
               <p className="text-center text-muted-foreground">
