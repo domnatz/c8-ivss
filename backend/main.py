@@ -185,3 +185,12 @@ async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     if not masterlist:
         raise HTTPException(status_code=404, detail="No masterlist found")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
+
+
+@app.get("/masterlist/{file_id}")
+async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
+    masterlist = result.scalars().first()
+    if not masterlist:
+        raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
+    return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}

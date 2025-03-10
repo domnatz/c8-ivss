@@ -1,14 +1,32 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { CubeIcon } from "@heroicons/react/24/outline";
 import BreadcrumbNav from "./BreadcrumbNav";
 import { Label } from "@/components/ui/label";
+import { getAssetById } from "@/_services/asset-service";
 
 export default function Header({ assetId }: { assetId: string }) {
+  const [assetName, setAssetName] = useState("");
+
+  useEffect(() => {
+    async function fetchAssetName() {
+      try {
+        const asset = await getAssetById(Number(assetId));
+        setAssetName(asset.asset_name);
+      } catch (error) {
+        console.error("Failed to fetch asset name:", error);
+      }
+    }
+    fetchAssetName();
+  }, [assetId]);
+
   return (
     <div>
       <div className="flex flex-col gap-2 w-full h-full">
         <span className="flex flex-row gap-1 font-medium items-center">
           <CubeIcon className="w-5 h-5" />
-          {assetId}
+          {assetName || "Loading..."}
         </span>
         <span className="flex flex-col gap-2">
           <BreadcrumbNav />
