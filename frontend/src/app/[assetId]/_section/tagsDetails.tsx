@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { uploadTags } from "@/services/tag-service";
+import { uploadTags } from "@/_services/tag-service";
 
 // Unified tag interface that works with the backend
 export interface Tags {
