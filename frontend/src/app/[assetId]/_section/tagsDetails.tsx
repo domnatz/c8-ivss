@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
+import { fetchTagsByFileId, fetchLatestMasterList } from "@/_services/tag-service";
 
 // Unified tag interface that works with the backend
 export interface Tags {
@@ -25,55 +26,6 @@ export interface Tags {
   tag_data?: Record<string, unknown>;
 }
 
-// Mock tag data for development and testing
-const mockTags: Tags[] = [
-  {
-    tag_id: 1,
-    tag_name: "Temperature",
-    description: "Temperature reading",
-    units: "°C",
-  },
-  {
-    tag_id: 2,
-    tag_name: "Pressure",
-    description: "Pressure reading",
-    units: "kPa",
-  },
-  { tag_id: 3, tag_name: "Flow", description: "Flow rate", units: "m³/s" },
-  { tag_id: 4, tag_name: "Level", description: "Fluid level", units: "m" },
-  {
-    tag_id: 5,
-    tag_name: "Voltage",
-    description: "Electrical voltage",
-    units: "V",
-  },
-  {
-    tag_id: 6,
-    tag_name: "Current",
-    description: "Electrical current",
-    units: "A",
-  },
-  { tag_id: 7, tag_name: "Power", description: "Electrical power", units: "W" },
-  {
-    tag_id: 8,
-    tag_name: "Frequency",
-    description: "Electrical frequency",
-    units: "Hz",
-  },
-  {
-    tag_id: 9,
-    tag_name: "Humidity",
-    description: "Relative humidity",
-    units: "%",
-  },
-  {
-    tag_id: 10,
-    tag_name: "Speed",
-    description: "Rotational speed",
-    units: "RPM",
-  },
-];
-
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
   buttonText?: string;
@@ -85,34 +37,46 @@ export function TagDetails({
 }: TagDetailsProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [tags, setTags] = React.useState<Tags[]>(mockTags);
+  const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [fileId, setFileId] = React.useState<number | null>(null);
 
-  // Fetch real tags from API if available
+  // Fetch the latest master list file ID and tags from API
   React.useEffect(() => {
-    const fetchTags = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
-        // Try to fetch tags from backend, fall back to mock tags if error
-        const response = await fetch("http://localhost:8000/tags");
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setTags(data);
-            return;
-          }
-        }
-        // If we get here, either the response wasn't ok or the data wasn't valid
-        console.log("Using mock tag data instead of API data");
+        const latestMasterList = await fetchLatestMasterList();
+        setFileId(latestMasterList.file_id);
+        const data = await fetchTagsByFileId(latestMasterList.file_id);
+        setTags(data);
       } catch (error) {
-        console.error("Error fetching tags:", error);
+        console.error("Error fetching initial data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTags();
+    fetchInitialData();
   }, []);
+
+  // Fetch tags periodically without refreshing the whole modal
+  React.useEffect(() => {
+    const fetchTagsPeriodically = async () => {
+      if (fileId) {
+        try {
+          const data = await fetchTagsByFileId(fileId);
+          setTags(data);
+        } catch (error) {
+          console.error("Error fetching tags:", error);
+        }
+      }
+    };
+
+    const intervalId = setInterval(fetchTagsPeriodically, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  }, [fileId]);
 
   const filteredTags = tags.filter((tag) =>
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())

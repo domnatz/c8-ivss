@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uploadMasterlistFile } from "@/_actions/asset-actions";
 import { toast } from "react-toastify";
+import { SelectFile } from "./select-file";
 
 interface UploadMasterlistProps {
   className?: string;
@@ -40,17 +41,20 @@ export function UploadMasterlist({
         className || ""
       }`}
     >
-      <Input
-        type="file"
-        accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-        className="w-full file:text-sm rounded-sm"
-        id="masterlist"
-        onChange={(e) => {
-          if (e.target.files) {
-            handleUploadMasterlist(e.target.files[0]);
-          }
-        }}
-      />
+      <div className="flex flex-row items-center gap-2">
+        <Input
+          type="file"
+          accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          className="w-full file:text-sm rounded-sm"
+          id="masterlist"
+          onChange={(e) => {
+            if (e.target.files) {
+              handleUploadMasterlist(e.target.files[0]);
+            }
+          }}
+        />
+        <SelectFile/>
+      </div>
       <Button className="w-full rounded-sm" disabled={isPending}>
         <DocumentPlusIcon className="w-5 h-5" />
         Upload Masterlist

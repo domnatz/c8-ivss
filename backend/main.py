@@ -143,13 +143,17 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
 
 class Tag(BaseModel):
     tag_name: str
-
 @app.post("/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
+        # Check if the masterlist with the same file name already exists
+        existing_masterlist = await db.execute(select(models.MasterList).where(models.MasterList.file_name == file.filename))
+        if existing_masterlist.scalars().first():
+            raise HTTPException(status_code=400, detail="A masterlist with this file name already exists")
+
         tags_column = "tags"
         content = await file.read()
 
@@ -158,16 +162,19 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
             reader = csv.DictReader(StringIO(content_str))
 
             async with db.begin():
+                masterlist = models.MasterList(file_name=file.filename)
+                db.add(masterlist)
+                await db.flush()
+                print(f"Added masterlist: {masterlist}")
+
                 for row in reader:
-                    masterlist = models.MasterList(file_name=row.get('file_name', 'Unknown'))
-                    db.add(masterlist)
-                    await db.flush()
-                    
+                    print(f"Processing row: {row}")
                     if tags_column in row and row[tags_column] is not None:
                         tags = row[tags_column].split(',')
                         for tag_name in tags:
-                            tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.file_id)
+                            tag = models.Tags(tag_name=tag_name.strip(), file_id=masterlist.file_id, tag_type="default")
                             db.add(tag)
+                            print(f"Added tag: {tag}")
                     else:
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found or empty in the file")
 
@@ -181,16 +188,19 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                 raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
 
             async with db.begin():
-                for row in sheet.iter_rows(min_row=2, values_only=True):
-                    masterlist = models.MasterList(file_name=row[0] or 'Unknown')
-                    db.add(masterlist)
-                    await db.flush()
+                masterlist = models.MasterList(file_name=file.filename)
+                db.add(masterlist)
+                await db.flush()
+                print(f"Added masterlist: {masterlist}")
 
+                for row in sheet.iter_rows(min_row=2, values_only=True):
+                    print(f"Processing row: {row}")
                     if row[tags_idx] is not None:
                         tags = row[tags_idx].split(',')
                         for tag_name in tags:
-                            tag = models.Tags(tag_name=tag_name.strip(), masterlist_id=masterlist.file_id)
+                            tag = models.Tags(tag_name=tag_name.strip(), file_id=masterlist.file_id, tag_type="default")
                             db.add(tag)
+                            print(f"Added tag: {tag}")
                     else:
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' is empty in the file")
 
@@ -201,7 +211,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-@app.get("/tags/{file_id}", response_model=List[Tag])
+@app.get("/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Tags).where(models.Tags.file_id == file_id))
     tags = result.scalars().all()
@@ -209,11 +219,19 @@ async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tags not found for the given file ID")
     return tags
 
-@app.get("/masterlist/latest", response_model=dict)
+@app.get("/masterlist/latest")
 async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).order_by(models.MasterList.file_id.desc()).limit(1))
     masterlist = result.scalars().first()
     if not masterlist:
         raise HTTPException(status_code=404, detail="No masterlist found")
+    return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
+
+@app.get("/masterlist/{file_id}")
+async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
+    masterlist = result.scalars().first()
+    if not masterlist:
+        raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
