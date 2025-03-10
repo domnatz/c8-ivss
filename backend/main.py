@@ -149,6 +149,11 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
+        # Check if the masterlist with the same file name already exists
+        existing_masterlist = await db.execute(select(models.MasterList).where(models.MasterList.file_name == file.filename))
+        if existing_masterlist.scalars().first():
+            raise HTTPException(status_code=400, detail="A masterlist with this file name already exists")
+
         tags_column = "tags"
         content = await file.read()
 
