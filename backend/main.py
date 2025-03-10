@@ -146,25 +146,61 @@ class Tag(BaseModel):
 @app.post("/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="Invalid file format")
+        raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
+        tags_column = "tags"
         content = await file.read()
+
         if file.filename.endswith('.csv'):
-            content = content.decode('utf-8')
-            tags = [Tag(**row) for row in csv.DictReader(StringIO(content))]
+            content_str = content.decode("utf-8")
+            reader = csv.DictReader(StringIO(content_str))
+
+            async with db.begin():
+                masterlist = models.MasterList(file_name=file.filename)
+                db.add(masterlist)
+                await db.flush()
+                print(f"Added masterlist: {masterlist}")
+
+                for row in reader:
+                    print(f"Processing row: {row}")
+                    if tags_column in row and row[tags_column] is not None:
+                        tags = row[tags_column].split(',')
+                        for tag_name in tags:
+                            tag = models.Tags(tag_name=tag_name.strip(), file_id=masterlist.file_id, tag_type="default")
+                            db.add(tag)
+                            print(f"Added tag: {tag}")
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found or empty in the file")
+
         else:
             workbook = load_workbook(filename=BytesIO(content))
             sheet = workbook.active
-            tags = []
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                tags.append(Tag(tag_name=row[0], description=row[1], units=row[2], file_id=row[3]))
+            headers = [cell.value for cell in sheet[1]]
+            
+            tags_idx = headers.index(tags_column) if tags_column in headers else None
+            if tags_idx is None:
+                raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
 
-        async with db.begin():
-            db.add_all([models.Tag(**tag.dict()) for tag in tags])
+            async with db.begin():
+                masterlist = models.MasterList(file_name=file.filename)
+                db.add(masterlist)
+                await db.flush()
+                print(f"Added masterlist: {masterlist}")
+
+                for row in sheet.iter_rows(min_row=2, values_only=True):
+                    print(f"Processing row: {row}")
+                    if row[tags_idx] is not None:
+                        tags = row[tags_idx].split(',')
+                        for tag_name in tags:
+                            tag = models.Tags(tag_name=tag_name.strip(), file_id=masterlist.file_id, tag_type="default")
+                            db.add(tag)
+                            print(f"Added tag: {tag}")
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' is empty in the file")
 
         await db.commit()
-        return {"message": "Masterlist uploaded successfully"}
+        return {"message": "Masterlist uploaded successfully", "file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
     except Exception as e:
         await db.rollback()
