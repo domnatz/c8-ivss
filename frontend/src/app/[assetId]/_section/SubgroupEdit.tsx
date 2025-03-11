@@ -27,6 +27,7 @@ import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { getAssetById } from "@/_services/asset-service";
+import { fetchTagsBySubgroupId } from "@/_services/subgroup-service"; // Import fetchTagsBySubgroupId
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
@@ -61,10 +62,18 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
     }
   }, [selectedAsset]);
 
-  // Update tags when selected subgroup changes
+  // Fetch tags when selected subgroup changes
   React.useEffect(() => {
     if (selectedSubgroup) {
-      setSubgroupTags(selectedSubgroup.subgroup_tags || []);
+      console.log("Selected Subgroup:", selectedSubgroup);
+      fetchTagsBySubgroupId(selectedSubgroup.subgroup_id)
+        .then((tags) => {
+          setSubgroupTags(tags);
+        })
+        .catch((error) => {
+          console.error("Error fetching tags:", error);
+          setSubgroupTags([]);
+        });
     } else {
       setSubgroupTags([]);
     }

@@ -9,6 +9,7 @@ from typing import List
 import csv
 from io import StringIO, BytesIO
 from openpyxl import load_workbook
+from fastapi.responses import JSONResponse
 
 # Initialize database
 async def init_models():
@@ -60,13 +61,10 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
-    print(f"Fetching subgroups for asset_id: {asset_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
     if not subgroups:
-        print(f"No subgroups found for asset_id: {asset_id}")
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
-    print(f"Found subgroups: {subgroups}")
     return subgroups
 
 @app.get("/subgroups/{subgroup_id}")
@@ -243,18 +241,30 @@ class SubgroupTagCreate(BaseModel):
 @app.post("/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
-    result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
-    existing_subgroup = result.scalars().first()
-    if not existing_subgroup:
-        raise HTTPException(status_code=404, detail="Subgroup not found")
+    try:
+        result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+        existing_subgroup = result.scalars().first()
+        if not existing_subgroup:
+            return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
 
-    new_subgroup_tag = models.SubgroupTag(
-        subgroup_id=subgroup_id,
-        tag_id=tag.tag_id,
-        subgroup_tag_name=tag.tag_name  # Ensure this field is set
-    )
-    db.add(new_subgroup_tag)
-    await db.commit()
-    await db.refresh(new_subgroup_tag)
-    print(f"Added tag {tag.tag_id} to subgroup {subgroup_id}")
-    return new_subgroup_tag
+        new_subgroup_tag = models.SubgroupTag(
+            subgroup_id=subgroup_id,
+            tag_id=tag.tag_id,
+            subgroup_tag_name=tag.tag_name  # Ensure this field is set
+        )
+        db.add(new_subgroup_tag)
+        await db.commit()
+        await db.refresh(new_subgroup_tag)
+        print(f"Added tag {tag.tag_id} to subgroup {subgroup_id}")
+        return new_subgroup_tag
+    except Exception as e:
+        print(f"Error adding tag to subgroup: {e}")
+        return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
+    
+@app.get("/subgroups/{subgroup_id}/tags")
+async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
+    tags = result.scalars().all()
+    if not tags:
+        raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
+    return tags
