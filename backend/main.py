@@ -61,13 +61,10 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
-    print(f"Fetching subgroups for asset_id: {asset_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
     if not subgroups:
-        print(f"No subgroups found for asset_id: {asset_id}")
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
-    print(f"Found subgroups: {subgroups}")
     return subgroups
 
 @app.get("/subgroups/{subgroup_id}")
@@ -263,3 +260,11 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
     except Exception as e:
         print(f"Error adding tag to subgroup: {e}")
         return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
+    
+@app.get("/subgroups/{subgroup_id}/tags")
+async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
+    tags = result.scalars().all()
+    if not tags:
+        raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
+    return tags

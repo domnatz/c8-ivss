@@ -13,3 +13,13 @@ export function addTagToSubgroup(
     }),
   });
 }
+
+export async function fetchTagsBySubgroupId(subgroupId: number): Promise<Subgroup_tag[]> {
+  const response = await fetch(`http://localhost:8000/subgroups/${subgroupId}/tags`);
+  if (response.ok) {
+    const data = await response.json();
+    return data as Subgroup_tag[];
+  } else {
+    throw new Error('Failed to fetch tags');
+  }
+}
