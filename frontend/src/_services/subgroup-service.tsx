@@ -22,6 +22,7 @@ export async function fetchTagsBySubgroupId(subgroupId: number): Promise<Subgrou
     const data = await response.json();
     return data as Subgroup_tag[];
   } else {
-    throw new Error('Failed to fetch tags');
+    const errorText = await response.text(); // Get error text from response
+    throw new Error(`Failed to fetch tags: ${errorText}`); // Include error text in the error message
   }
 }

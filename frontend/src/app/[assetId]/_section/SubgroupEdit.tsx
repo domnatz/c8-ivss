@@ -35,9 +35,10 @@ import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTa
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
+  onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
 }
 
-export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
+export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
@@ -46,6 +47,7 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
+  const [selectedTagId, setSelectedTagId] = React.useState<number | null>(null); // Add state for selected tag ID
   const params = useParams();
   const assetId = Number(params.assetId);
 
@@ -72,7 +74,8 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
         })
         .catch((error) => {
           console.error("Error fetching tags:", error);
-          setSubgroupTags([]);
+          setSubgroupTags([]); // Clear tags on error
+          toast.error("Failed to fetch tags for the selected subgroup"); // Display error message
         });
     } else {
       setSubgroupTags([]);
@@ -152,6 +155,11 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTagClick = (tag: Subgroup_tag) => {
+    setSelectedTagId(tag.subgroup_tag_id); // Set the selected tag ID
+    onSelectSubgroupTag(tag); // Call the function to set the selected subgroup tag
   };
 
   if (!selectedAsset) {
@@ -239,7 +247,8 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
                   <Button
                     key={tag.subgroup_tag_id}
                     variant="outline"
-                    className="flex items-center justify-between gap-2"
+                    className={`flex items-center justify-between gap-2 ${tag.subgroup_tag_id === selectedTagId ? "bg-orange-50 text-orange-600" : ""}`} // Highlight selected tag
+                    onClick={() => handleTagClick(tag)} // Add onClick handler
                   >
                     {tag.subgroup_tag_name}
                   </Button>

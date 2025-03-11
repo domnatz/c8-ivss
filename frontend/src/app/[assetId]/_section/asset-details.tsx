@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import SubgroupEdit from "./SubgroupEdit";
 import SubgroupTagEdit from "./SubgroupTagEdit";
 import { getAssetById } from "@/_services/asset-service";
+import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag
 
 export default function AssetDetails() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function AssetDetails() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSubgroupTag, setSelectedSubgroupTag] = useState<Subgroup_tag | null>(null); // Add state for selected subgroup tag
 
   useEffect(() => {
     if (!numericAssetId) {
@@ -60,8 +62,11 @@ export default function AssetDetails() {
   return (
     <div className="py-4 w-full h-full">
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
-        <SubgroupEdit selectedAsset={selectedAsset} />
-        <SubgroupTagEdit selectedAsset={selectedAsset} />
+        <SubgroupEdit 
+          selectedAsset={selectedAsset} 
+          onSelectSubgroupTag={setSelectedSubgroupTag} // Pass the setter function
+        />
+        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} /> {/* Pass the selected subgroup tag */}
       </div>
     </div>
   );

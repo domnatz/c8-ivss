@@ -13,6 +13,7 @@ import { SearchForm } from "@/components/user/search-form";
 import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
+  TagIcon,
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -22,67 +23,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TagDetails, Tags } from "./tagsDetails";
-import { Asset } from "@/models/asset";
-import { Subgroup } from "@/models/subgroup";
+
 import { Subgroup_tag } from "@/models/subgroup-tag";
-import { getAssetById } from "@/_services/asset-service";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
-import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 
-interface SubgroupEditProps {
-  selectedAsset: Asset | null;
+
+interface SubgroupTagEditProps {
+  selectedSubgroupTag: Subgroup_tag | null; // Update prop type
 }
 
-export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
+export default function SubgroupTagEdit({ selectedSubgroupTag }: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedSubgroup, setSelectedSubgroup] =
-    React.useState<Subgroup | null>(null);
+  const [selectedSubgroupTags, setSelectedSubgroupTags] =
+    React.useState<Subgroup_tag | null>(null);
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
     "newest"
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const params = useParams();
-  const assetId = Number(params.assetId);
-
-  // Select the first subgroup by default when asset changes
-  React.useEffect(() => {
-    if (
-      selectedAsset &&
-      selectedAsset.subgroups &&
-      selectedAsset.subgroups.length > 0
-    ) {
-      setSelectedSubgroup(selectedAsset.subgroups[0]);
-    } else {
-      setSelectedSubgroup(null);
-    }
-  }, [selectedAsset]);
-
-  // Update tags when selected subgroup changes
-  React.useEffect(() => {
-    if (selectedSubgroup) {
-      setSubgroupTags(selectedSubgroup.subgroup_tags || []);
-    } else {
-      setSubgroupTags([]);
-    }
-  }, [selectedSubgroup]);
-
-  if (!selectedAsset) {
-    return (
-      <div className="w-full flex items-center justify-center">
-        Loading asset details...
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col justify-between items-start">
+      
         <h2 className="text-lg font-semibold">Tag Editor</h2>
-       
+        {/* Display selected subgroup tag name */}
+        {selectedSubgroupTag && (
+          <span className="text-lg text-foreground flex flex-row items-center gap-2">
+            {selectedSubgroupTag.subgroup_tag_name}
+            <TagIcon className="w-5 h-5 text-foreground" />
+          </span>
+        )}
       </div>
 
       <div className="w-full flex flex-row items-center gap-2">
@@ -126,33 +100,7 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
       </div>
 
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
-        {selectedSubgroup ? (
-          <div>
-            {/* {filteredTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {filteredTags.map((tag) => (
-                  <Button
-                    key={tag.subgroup_tag_id}
-                    variant="outline"
-                    className="flex items-center justify-between gap-2"
-                  >
-                    {tag.subgroup_tag_name}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">
-                No tags found for this subgroup.
-              </p>
-            )} */}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-muted-foreground">
-              Select a tag to view its details
-            </p>
-          </div>
-        )}
+
       </div>
     </div>
   );
