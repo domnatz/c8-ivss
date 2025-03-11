@@ -40,6 +40,7 @@ class SubgroupTag(Base):
     tag_id = Column(Integer, ForeignKey("tags.tag_id", ondelete="CASCADE"))
     subgroup_id = Column(Integer, ForeignKey("subgroups.subgroup_id", ondelete="CASCADE"))
     subgroup = relationship("Subgroups", back_populates="subgroup_tags")
+    subgroup_tag_name = Column(String, nullable=False)  
     tag = relationship("Tags", back_populates="subgroup_tags")
 
 class Templates(Base):
