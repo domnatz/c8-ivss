@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -235,3 +235,26 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
     if not masterlist:
         raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
+
+class SubgroupTagCreate(BaseModel):
+    tag_id: int
+    tag_name: str
+
+@app.post("/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
+async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
+    print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
+    result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+    existing_subgroup = result.scalars().first()
+    if not existing_subgroup:
+        raise HTTPException(status_code=404, detail="Subgroup not found")
+
+    new_subgroup_tag = models.SubgroupTag(
+        subgroup_id=subgroup_id,
+        tag_id=tag.tag_id,
+        subgroup_tag_name=tag.tag_name  # Ensure this field is set
+    )
+    db.add(new_subgroup_tag)
+    await db.commit()
+    await db.refresh(new_subgroup_tag)
+    print(f"Added tag {tag.tag_id} to subgroup {subgroup_id}")
+    return new_subgroup_tag

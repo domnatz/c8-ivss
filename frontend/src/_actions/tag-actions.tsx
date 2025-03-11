@@ -5,8 +5,8 @@ import { addTagToSubgroup } from "@/_services/subgroup-service";
 export async function addTagToSubgroupAction(subgroupId: number, tagId: number, tagName: string) {
   try {
     const response = await addTagToSubgroup(subgroupId, { tag_id: tagId, tag_name: tagName });
-    await response.json();
-    return { success: true };
+    const data = await response.json();
+    return { success: true, data };
   } catch (error: any) {
     console.error("There was an error adding the tag to the subgroup!", error);
     return { success: false, error: error.message };

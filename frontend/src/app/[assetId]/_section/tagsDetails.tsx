@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { fetchTagsByFileId, fetchLatestMasterList } from "@/_services/tag-service";
+import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 
 // Unified tag interface that works with the backend
 export interface Tags {
@@ -29,11 +30,13 @@ export interface Tags {
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
   buttonText?: string;
+  subgroupId: number | undefined; // Add subgroupId prop
 }
 
 export function TagDetails({
   onAddTag,
   buttonText = "Add Tag",
+  subgroupId, // Destructure subgroupId
 }: TagDetailsProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -82,11 +85,21 @@ export function TagDetails({
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddTag = (tag: Tags) => {
+  const handleAddTag = async (tag: Tags) => {
+    if (!subgroupId) {
+      toast.error("No subgroup selected");
+      return;
+    }
+
     try {
-      onAddTag(tag);
-      setOpen(false);
-      toast.success(`Tag "${tag.tag_name}" was added successfully`);
+      const result = await addTagToSubgroupAction(subgroupId, tag.tag_id, tag.tag_name); // Add tag to subgroup
+      if (result.success) {
+        onAddTag(tag);
+        setOpen(false);
+        toast.success(`Tag "${tag.tag_name}" was added successfully`);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error("Error adding tag:", error);
       toast.error("Failed to add tag");

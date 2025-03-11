@@ -10,7 +10,7 @@ export function addTagToSubgroup(
     },
     body: JSON.stringify({
       tag_id: tagData.tag_id,
-      subgroup_tag_name: tagData.tag_name,
+      tag_name: tagData.tag_name,
     }),
   });
 }
