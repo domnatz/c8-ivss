@@ -1,86 +1,159 @@
-// "use client";
+"use client";
 
-// import * as React from "react";
-// // ...other imports...
-// import { toast } from "react-toastify";
-// import { TagDetails, Tags } from "./tagsDetails";
-// import { Asset } from "@/models/asset";
-// import { Subgroup } from "@/models/subgroup";
-// import { Subgroup_tag } from "@/models/subgroup-tag";
-// import { getAssetById } from "@/_services/asset-service";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SearchForm } from "@/components/user/search-form";
+import {
+  AdjustmentsVerticalIcon,
+  PlusCircleIcon,
+} from "@heroicons/react/24/outline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TagDetails, Tags } from "./tagsDetails";
+import { Asset } from "@/models/asset";
+import { Subgroup } from "@/models/subgroup";
+import { Subgroup_tag } from "@/models/subgroup-tag";
+import { getAssetById } from "@/_services/asset-service";
+import { useParams } from "next/navigation";
+import { toast } from "react-toastify";
+import { createSubgroup } from "@/_actions/asset-actions";
+import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 
-// export default function SubgroupTagEdit() {
-//   const [searchQuery, setSearchQuery] = React.useState("");
-//   const [selectedSubgroup, setSelectedSubgroup] = React.useState<Subgroup | null>(null);
-//   const [asset, setAsset] = React.useState<Asset | null>(null);
-//   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
-//   const [loading, setLoading, setLoading] = React.useState(true);
-//   const [dialogOpen, setDialogOpen] = React.useState(false);
-//   const params = useParams();
-//   const assetId = Number(params.assetId);
+interface SubgroupEditProps {
+  selectedAsset: Asset | null;
+}
 
-//   // Fetch asset data when component mounts
-//   React.useEffect(() => {
-//     const fetchAsset = async () => {
-//       try {
-//         setLoading(true);
-//         if (!assetId) return;
+export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedSubgroup, setSelectedSubgroup] =
+    React.useState<Subgroup | null>(null);
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
+    "newest"
+  );
+  const [loading, setLoading] = React.useState(false);
+  const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
+  const params = useParams();
+  const assetId = Number(params.assetId);
 
-//         const assetData = await getAssetById(assetId);
-//         setAsset(assetData);
+  // Select the first subgroup by default when asset changes
+  React.useEffect(() => {
+    if (
+      selectedAsset &&
+      selectedAsset.subgroups &&
+      selectedAsset.subgroups.length > 0
+    ) {
+      setSelectedSubgroup(selectedAsset.subgroups[0]);
+    } else {
+      setSelectedSubgroup(null);
+    }
+  }, [selectedAsset]);
 
-//         // Auto-select the first subgroup if available
-//         if (assetData.subgroups && assetData.subgroups.length > 0) {
-//           setSelectedSubgroup(assetData.subgroups[0]);
-//         }
-//       } catch (error) {
-//         console.error("Error fetching asset:", error);
-//         toast.error("Failed to load asset details");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
+  // Update tags when selected subgroup changes
+  React.useEffect(() => {
+    if (selectedSubgroup) {
+      setSubgroupTags(selectedSubgroup.subgroup_tags || []);
+    } else {
+      setSubgroupTags([]);
+    }
+  }, [selectedSubgroup]);
 
-//     fetchAsset();
-//   }, [assetId]);
+  if (!selectedAsset) {
+    return (
+      <div className="w-full flex items-center justify-center">
+        Loading asset details...
+      </div>
+    );
+  }
 
-//   // Filter and sort tags based on searchQuery and sortOrder for the selected subgroup
-//   const filteredTags = selectedSubgroup
-//     ? (selectedSubgroup.subgroup_tags ?? [])
-//         .filter((tag) =>
-//           tag.subgroup_tag_name
-//             .toLowerCase()
-//             .includes(searchQuery.toLowerCase())
-//         )
-//         .sort((a, b) =>
-//           sortOrder === "newest"
-//             ? b.subgroup_tag_id - a.subgroup_tag_id
-//             : a.subgroup_tag_id - b.subgroup_tag_id
-//         )
-//     : [];
+  return (
+    <div className="w-full h-full flex flex-col gap-2">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Tag Editor</h2>
+       
+      </div>
 
-//   // Function to handle adding a tag to the selected subgroup
-//   const handleAddTag = (tag: Tags) => {
-//     if (selectedSubgroup && asset) {
-//       // ...existing implementation...
+      <div className="w-full flex flex-row items-center gap-2">
+        <SearchForm
+          className="w-full"
+          value={searchQuery}
+          onInputChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter tags..."
+        />
 
-//       toast.success(`Added "${tag.tag_name}" to ${selectedSubgroup.subgroup_name}`);
-//     }
-//   };
+        <DropdownMenu>
+          <DropdownMenuTrigger className="px-2 py-1 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
+            <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
+            Sort
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSortOrder("newest")}>
+              Newest Added
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortOrder("oldest")}>
+              Oldest Added
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-//   // Function to handle removing a tag from the selected subgroup
-//   const handleRemoveTag = (tagId: number) => {
-//     if (!selectedSubgroup || !asset) return;
+        <Button
+          variant="outline"
+          size="sm"
+          // onClick={handleAddSubgroup}
+          disabled={loading}
+        >
+          <PlusCircleIcon className="w-4 h-4 mr-1" />
+          Add Subgroup Tag
+        </Button>
+      </div>
 
-//     // ...existing implementation...
+      <div className="flex flex-row w-full gap-2">
 
-//     toast.success("Tag was removed from the subgroup");
-//   };
+      </div>
 
-//   const handleSaveTemplate = () => {
-//     toast.success("Your tag template has been saved");
-//     setDialogOpen(false);
-//   };
-
-//   // ...existing return statement...
-// }
+      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
+        {selectedSubgroup ? (
+          <div>
+            {/* {filteredTags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {filteredTags.map((tag) => (
+                  <Button
+                    key={tag.subgroup_tag_id}
+                    variant="outline"
+                    className="flex items-center justify-between gap-2"
+                  >
+                    {tag.subgroup_tag_name}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                No tags found for this subgroup.
+              </p>
+            )} */}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full">
+            <p className="text-muted-foreground">
+              Select a tag to view its details
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

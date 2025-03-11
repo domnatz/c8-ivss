@@ -5,6 +5,7 @@ import { CubeIcon } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import SubgroupEdit from "./SubgroupEdit";
+import SubgroupTagEdit from "./SubgroupTagEdit";
 import { getAssetById } from "@/_services/asset-service";
 
 export default function AssetDetails() {
@@ -60,7 +61,7 @@ export default function AssetDetails() {
     <div className="py-4 w-full h-full">
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
         <SubgroupEdit selectedAsset={selectedAsset} />
-        {/* <SubgroupTagEdit /> */}
+        <SubgroupTagEdit selectedAsset={selectedAsset} />
       </div>
     </div>
   );
