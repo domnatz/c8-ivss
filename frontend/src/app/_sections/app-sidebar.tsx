@@ -17,6 +17,7 @@ import { FilterAssets } from "@/components/assets/filter-assets";
 import { UploadMasterlist } from "@/components/assets/upload-masterlist";
 import { AddAssetButton } from "@/components/assets/add-asset-button";
 import { AssetList } from "@/components/assets/asset-list";
+import { Asset } from "../../models/asset";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const dispatch = useAppDispatch();
@@ -32,6 +33,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         dispatch(rootActions.assetsSet([]));
       });
   }, [dispatch]);
+
+  // Handler to set current asset when an asset is selected
+  const handleAssetSelect = useCallback(
+    (asset: Asset) => {
+      dispatch(rootActions.assetChanged(asset));
+    },
+    [dispatch]
+  );
 
   // Load assets on component mount
   useEffect(() => {
@@ -69,7 +78,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* Asset List Component */}
       <SidebarContent className="gap-0">
-        <AssetList onAssetChange={fetchAssets} />
+        <AssetList
+          onAssetChange={fetchAssets}
+          onAssetSelect={handleAssetSelect}
+        />
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
