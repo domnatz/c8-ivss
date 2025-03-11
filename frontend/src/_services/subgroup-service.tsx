@@ -1,3 +1,5 @@
+import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag type
+
 export function addTagToSubgroup(
   subgroupId: number,
   tagData: { tag_id: number; tag_name: string }
