@@ -10,4 +10,5 @@ export interface RootState {
   editingValues: {
     [key: string]: string;
   };
+  currentAsset?: Asset;
 }

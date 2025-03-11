@@ -28,6 +28,12 @@ export const rootSlice = createSlice({
         assets: action.payload,
       };
     },
+    assetChanged(state: RootState, action: PayloadAction<Asset>) {
+      return {
+        ...state,
+        currentAsset: action.payload,
+      };
+    },
     filterSet(state: RootState, action: PayloadAction<string>) {
       return {
         ...state,
