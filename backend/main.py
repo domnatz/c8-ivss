@@ -141,17 +141,13 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
 
 class Tag(BaseModel):
     tag_name: str
+
 @app.post("/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
-        # Check if the masterlist with the same file name already exists
-        existing_masterlist = await db.execute(select(models.MasterList).where(models.MasterList.file_name == file.filename))
-        if existing_masterlist.scalars().first():
-            raise HTTPException(status_code=400, detail="A masterlist with this file name already exists")
-
         tags_column = "tags"
         content = await file.read()
 
@@ -174,6 +170,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                             db.add(tag)
                             print(f"Added tag: {tag}")
                     else:
+                        print(f"Tags column '{tags_column}' not found or empty in the file")
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found or empty in the file")
 
         else:
@@ -183,6 +180,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
             
             tags_idx = headers.index(tags_column) if tags_column in headers else None
             if tags_idx is None:
+                print(f"Tags column '{tags_column}' not found in the file")
                 raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
 
             async with db.begin():
@@ -200,6 +198,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                             db.add(tag)
                             print(f"Added tag: {tag}")
                     else:
+                        print(f"Tags column '{tags_column}' is empty in the file")
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' is empty in the file")
 
         await db.commit()
@@ -207,7 +206,9 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
 
     except Exception as e:
         await db.rollback()
+        print(f"Error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    
 
 @app.get("/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):

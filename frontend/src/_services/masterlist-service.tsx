@@ -13,3 +13,19 @@ export async function fetchMasterlistByFileId(file_id: number) {
   }
   return response.json();
 }
+
+export async function uploadMasterlistFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("http://localhost:8000/upload_masterlist", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    return { success: false, error: response.statusText };
+  }
+
+  return { success: true, data: await response.json() };
+}
