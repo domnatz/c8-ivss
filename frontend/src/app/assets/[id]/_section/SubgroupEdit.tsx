@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TagDetails, Tags } from "./tagsDetails";
+import { TagDetails } from "./tagsDetails";
 import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
@@ -32,13 +32,17 @@ import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
+import { Tags } from "@/models/tags";
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
   onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
 }
 
-export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: SubgroupEditProps) {
+export default function SubgroupEdit({
+  selectedAsset,
+  onSelectSubgroupTag,
+}: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
@@ -48,8 +52,9 @@ export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: Sub
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const [selectedTagId, setSelectedTagId] = React.useState<number | null>(null); // Add state for selected tag ID
+
   const params = useParams();
-  const assetId = Number(params.assetId);
+  const assetId = Number(params.id); // Change from params.assetId to params.id
 
   // Select the first subgroup by default when asset changes
   React.useEffect(() => {
@@ -235,7 +240,10 @@ export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: Sub
             ))}
           </SelectContent>
         </Select>
-        <TagDetails onAddTag={handleAddTag} subgroupId={selectedSubgroup?.subgroup_id} />
+        <TagDetails
+          onAddTag={handleAddTag}
+          subgroupId={selectedSubgroup?.subgroup_id}
+        />
       </div>
 
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
@@ -247,7 +255,11 @@ export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: Sub
                   <Button
                     key={tag.subgroup_tag_id}
                     variant="outline"
-                    className={`flex items-center justify-between gap-2 ${tag.subgroup_tag_id === selectedTagId ? "bg-orange-50 text-orange-600" : ""}`} // Highlight selected tag
+                    className={`flex items-center justify-between gap-2 ${
+                      tag.subgroup_tag_id === selectedTagId
+                        ? "bg-orange-50 text-orange-600"
+                        : ""
+                    }`} // Highlight selected tag
                     onClick={() => handleTagClick(tag)} // Add onClick handler
                   >
                     {tag.subgroup_tag_name}

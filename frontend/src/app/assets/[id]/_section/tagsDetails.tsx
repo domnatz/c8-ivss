@@ -13,19 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { fetchTagsByFileId, fetchLatestMasterList } from "@/_services/tag-service";
+import {
+  fetchTagsByFileId,
+  fetchLatestMasterList,
+} from "@/_services/tag-service";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
-
-// Unified tag interface that works with the backend
-export interface Tags {
-  tag_id: number;
-  tag_name: string;
-  description?: string;
-  units?: string;
-  file_id?: number;
-  tag_type?: string;
-  tag_data?: Record<string, unknown>;
-}
+import { Tags } from "@/models/tags";
 
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
@@ -92,7 +85,11 @@ export function TagDetails({
     }
 
     try {
-      const result = await addTagToSubgroupAction(subgroupId, tag.tag_id, tag.tag_name); // Add tag to subgroup
+      const result = await addTagToSubgroupAction(
+        subgroupId,
+        tag.tag_id,
+        tag.tag_name
+      ); // Add tag to subgroup
       if (result.success) {
         onAddTag(tag);
         setOpen(false);
