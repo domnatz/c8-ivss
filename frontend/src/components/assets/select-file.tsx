@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getMasterlist } from "@/_actions/asset-actions"; // Import the getMasterlist action
+import { getAllMasterlists } from "@/_actions/asset-actions"; // Import the getAllMasterlists action
 import { Masterlist } from "@/models/masterlist";
 
 interface SelectFileProps {
@@ -26,7 +26,7 @@ export function SelectFile({ className }: SelectFileProps) {
   React.useEffect(() => {
     async function loadFiles() {
       try {
-        const result = await getMasterlist(); // Fetch latest masterlist
+        const result = await getAllMasterlists(); // Fetch all masterlist files
         if (result.success) {
           console.log("Fetched files:", result.data); // Add logging to check fetched data
           setFiles(Array.isArray(result.data) ? result.data : [result.data]); // Ensure files is an array

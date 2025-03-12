@@ -29,3 +29,12 @@ export async function uploadMasterlistFile(file: File) {
 
   return { success: true, data: await response.json() };
 }
+
+// Fetch all masterlist files
+export async function fetchAllMasterlists() {
+  const response = await fetch(`http://localhost:8000/masterlists`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch all masterlists: ${response.statusText}`);
+  }
+  return response.json();
+}

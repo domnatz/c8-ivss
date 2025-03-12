@@ -269,3 +269,11 @@ async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)
     if not tags:
         raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
     return tags
+
+@app.get("/masterlists")
+async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.MasterList))
+    masterlists = result.scalars().all()
+    if not masterlists:
+        raise HTTPException(status_code=404, detail="No masterlists found")
+    return masterlists
