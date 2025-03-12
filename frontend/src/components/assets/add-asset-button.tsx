@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { createAsset } from "@/_actions/asset-actions";
 import { useActionState } from "react";
+import React from "react";
 
 interface ActionResponse {
   success: boolean;
@@ -37,7 +38,9 @@ export function AddAssetButton({ className, disabled }: AddAssetButtonProps) {
           className="hover:text-foreground/50 cursor-pointer"
           onClick={(e) => {
             e.preventDefault();
-            formAction(null);
+            React.startTransition(() => {
+              formAction(null);
+            });
           }}
           disabled={disabled}
         >

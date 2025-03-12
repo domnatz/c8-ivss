@@ -7,7 +7,7 @@ import {
   renameSubgroup,
   uploadMasterlist,
 } from "@/_services/asset-service";
-import { fetchMasterlist, fetchMasterlistByFileId } from "@/_services/masterlist-service"; // Import fetchMasterlist
+import { fetchMasterlist, fetchMasterlistByFileId, fetchAllMasterlists } from "@/_services/masterlist-service"; // Import fetchAllMasterlists
 import { revalidatePath } from "next/cache";
 
 export async function createAsset(_prevState: any = null) {
@@ -93,6 +93,17 @@ export async function getMasterlist(fileId?: number) {
     return { success: true, data: masterlist };
   } catch (error: any) {
     console.error("There was an error fetching the masterlist!", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch all masterlists action
+export async function getAllMasterlists() {
+  try {
+    const masterlists = await fetchAllMasterlists(); // Fetch all masterlists
+    return { success: true, data: masterlists };
+  } catch (error: any) {
+    console.error("There was an error fetching all masterlists!", error);
     return { success: false, error: error.message };
   }
 }

@@ -27,15 +27,18 @@ import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { getAssetById } from "@/_services/asset-service";
+import { fetchTagsBySubgroupId } from "@/_services/subgroup-service"; // Import fetchTagsBySubgroupId
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
+import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
+  onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
 }
 
-export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
+export default function SubgroupEdit({ selectedAsset, onSelectSubgroupTag }: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
@@ -44,6 +47,7 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
+  const [selectedTagId, setSelectedTagId] = React.useState<number | null>(null); // Add state for selected tag ID
   const params = useParams();
   const assetId = Number(params.assetId);
 
@@ -60,10 +64,19 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
     }
   }, [selectedAsset]);
 
-  // Update tags when selected subgroup changes
+  // Fetch tags when selected subgroup changes
   React.useEffect(() => {
     if (selectedSubgroup) {
-      setSubgroupTags(selectedSubgroup.subgroup_tags || []);
+      console.log("Selected Subgroup:", selectedSubgroup);
+      fetchTagsBySubgroupId(selectedSubgroup.subgroup_id)
+        .then((tags) => {
+          setSubgroupTags(tags);
+        })
+        .catch((error) => {
+          console.error("Error fetching tags:", error);
+          setSubgroupTags([]); // Clear tags on error
+          toast.error("Failed to fetch tags for the selected subgroup"); // Display error message
+        });
     } else {
       setSubgroupTags([]);
     }
@@ -111,38 +124,42 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
     try {
       setLoading(true);
 
-      // You would normally call an API here to add the tag
-      // Since we don't have that endpoint in the service yet, we'll simulate it
-
-      // Create a new tag object
-      const highestId = Math.max(
-        0,
-        ...(selectedAsset.subgroups ?? []).flatMap(
-          (subgroup) =>
-            subgroup.subgroup_tags?.map((tag) => tag.subgroup_tag_id) ?? []
-        )
+      // Call the API to add the tag to the subgroup
+      const result = await addTagToSubgroupAction(
+        selectedSubgroup.subgroup_id,
+        tag.tag_id,
+        tag.tag_name
       );
-      const newTagId = highestId + 1;
 
-      const newTag: Subgroup_tag = {
-        subgroup_tag_id: newTagId,
-        tag_id: tag.tag_id,
-        subgroup_id: selectedSubgroup.subgroup_id,
-        subgroup_tag_name: tag.tag_name,
-      };
+      if (result.success) {
+        // Create a new tag object
+        const newTag: Subgroup_tag = {
+          subgroup_tag_id: result.data.subgroup_tag_id,
+          tag_id: tag.tag_id,
+          subgroup_id: selectedSubgroup.subgroup_id,
+          subgroup_tag_name: tag.tag_name,
+        };
 
-      // Add it locally for now
-      setSubgroupTags((prev) => [...prev, newTag]);
+        // Add it locally
+        setSubgroupTags((prev) => [...prev, newTag]);
 
-      toast.success(
-        `Added "${tag.tag_name}" to ${selectedSubgroup.subgroup_name}`
-      );
+        toast.success(
+          `Added "${tag.tag_name}" to ${selectedSubgroup.subgroup_name}`
+        );
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error("Error adding tag:", error);
       toast.error("Failed to add tag to subgroup");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTagClick = (tag: Subgroup_tag) => {
+    setSelectedTagId(tag.subgroup_tag_id); // Set the selected tag ID
+    onSelectSubgroupTag(tag); // Call the function to set the selected subgroup tag
   };
 
   if (!selectedAsset) {
@@ -218,7 +235,7 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
             ))}
           </SelectContent>
         </Select>
-        <TagDetails onAddTag={handleAddTag} />
+        <TagDetails onAddTag={handleAddTag} subgroupId={selectedSubgroup?.subgroup_id} />
       </div>
 
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
@@ -230,7 +247,8 @@ export default function SubgroupEdit({ selectedAsset }: SubgroupEditProps) {
                   <Button
                     key={tag.subgroup_tag_id}
                     variant="outline"
-                    className="flex items-center justify-between gap-2"
+                    className={`flex items-center justify-between gap-2 ${tag.subgroup_tag_id === selectedTagId ? "bg-orange-50 text-orange-600" : ""}`} // Highlight selected tag
+                    onClick={() => handleTagClick(tag)} // Add onClick handler
                   >
                     {tag.subgroup_tag_name}
                   </Button>

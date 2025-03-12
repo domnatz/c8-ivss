@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { DocumentPlusIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { uploadMasterlistFile } from "@/_actions/asset-actions";
+import { uploadMasterlistFile } from "@/_services/masterlist-service"; // Update the import path
 import { toast } from "react-toastify";
 import { SelectFile } from "./select-file";
 

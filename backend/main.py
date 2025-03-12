@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -9,6 +9,7 @@ from typing import List
 import csv
 from io import StringIO, BytesIO
 from openpyxl import load_workbook
+from fastapi.responses import JSONResponse
 
 # Initialize database
 async def init_models():
@@ -60,13 +61,10 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
-    print(f"Fetching subgroups for asset_id: {asset_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
     if not subgroups:
-        print(f"No subgroups found for asset_id: {asset_id}")
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
-    print(f"Found subgroups: {subgroups}")
     return subgroups
 
 @app.get("/subgroups/{subgroup_id}")
@@ -143,17 +141,13 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
 
 class Tag(BaseModel):
     tag_name: str
+
 @app.post("/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
     try:
-        # Check if the masterlist with the same file name already exists
-        existing_masterlist = await db.execute(select(models.MasterList).where(models.MasterList.file_name == file.filename))
-        if existing_masterlist.scalars().first():
-            raise HTTPException(status_code=400, detail="A masterlist with this file name already exists")
-
         tags_column = "tags"
         content = await file.read()
 
@@ -176,6 +170,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                             db.add(tag)
                             print(f"Added tag: {tag}")
                     else:
+                        print(f"Tags column '{tags_column}' not found or empty in the file")
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found or empty in the file")
 
         else:
@@ -185,6 +180,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
             
             tags_idx = headers.index(tags_column) if tags_column in headers else None
             if tags_idx is None:
+                print(f"Tags column '{tags_column}' not found in the file")
                 raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found in the file")
 
             async with db.begin():
@@ -202,6 +198,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                             db.add(tag)
                             print(f"Added tag: {tag}")
                     else:
+                        print(f"Tags column '{tags_column}' is empty in the file")
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' is empty in the file")
 
         await db.commit()
@@ -209,7 +206,9 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
 
     except Exception as e:
         await db.rollback()
+        print(f"Error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    
 
 @app.get("/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
@@ -235,3 +234,46 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
     if not masterlist:
         raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
+
+class SubgroupTagCreate(BaseModel):
+    tag_id: int
+    tag_name: str
+
+@app.post("/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
+async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
+    print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
+    try:
+        result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+        existing_subgroup = result.scalars().first()
+        if not existing_subgroup:
+            return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
+
+        new_subgroup_tag = models.SubgroupTag(
+            subgroup_id=subgroup_id,
+            tag_id=tag.tag_id,
+            subgroup_tag_name=tag.tag_name  # Ensure this field is set
+        )
+        db.add(new_subgroup_tag)
+        await db.commit()
+        await db.refresh(new_subgroup_tag)
+        print(f"Added tag {tag.tag_id} to subgroup {subgroup_id}")
+        return new_subgroup_tag
+    except Exception as e:
+        print(f"Error adding tag to subgroup: {e}")
+        return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
+    
+@app.get("/subgroups/{subgroup_id}/tags")
+async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
+    tags = result.scalars().all()
+    if not tags:
+        raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
+    return tags
+
+@app.get("/masterlists")
+async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.MasterList))
+    masterlists = result.scalars().all()
+    if not masterlists:
+        raise HTTPException(status_code=404, detail="No masterlists found")
+    return masterlists
