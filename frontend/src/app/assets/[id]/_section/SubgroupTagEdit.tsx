@@ -14,6 +14,8 @@ import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
   TagIcon,
+  ChevronUpDownIcon,
+  BookmarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -28,6 +30,8 @@ import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Toggle } from "@/components/ui/toggle";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
@@ -85,7 +89,7 @@ export default function SubgroupTagEdit({
         </DropdownMenu>
 
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           // onClick={handleAddSubgroup}
           disabled={loading}
@@ -95,7 +99,40 @@ export default function SubgroupTagEdit({
         </Button>
       </div>
 
-      <div className="flex flex-row w-full gap-2"></div>
+      {/* Make this a separate Component*/}
+      <div className="flex flex-row  justify-between w-full gap-2">
+        <div className="flex flex-row gap-2">
+          <Select>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select Template" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="system">System</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Dialog>
+            <DialogTrigger className="border rounded-md px-2 hover:text-blue-600">
+                <ChevronUpDownIcon className="h-5 w-5"/>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Are you absolutely sure?</DialogTitle>
+                <DialogDescription>
+                  This action cannot be undone. This will permanently delete your account
+                  and remove your data from our servers.
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <Toggle variant="outline" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-600 data-[state=on]:border-blue-300">
+          <BookmarkIcon className="h-5 w-5"/>
+          Save Template
+        </Toggle>
+      </div>
 
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto"></div>
     </div>

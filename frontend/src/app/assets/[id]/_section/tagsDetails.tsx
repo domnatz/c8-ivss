@@ -118,13 +118,13 @@ export function TagDetails({
             Select tags to add to the selected subgroup
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
+        <div className="flex flex-col gap-4">
           <Input
             placeholder="Search tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 max-h-128 overflow-y-auto"> {/* Make the tags list scrollable */}
             {loading ? (
               <p className="text-center text-muted-foreground">
                 Loading tags...
