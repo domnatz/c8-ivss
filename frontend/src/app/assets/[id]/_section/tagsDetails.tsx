@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import {
   fetchTagsByFileId,
-  fetchLatestMasterList,
 } from "@/_services/tag-service";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
@@ -24,27 +23,27 @@ interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
   buttonText?: string;
   subgroupId: number | undefined; // Add subgroupId prop
+  masterlistId: number | null; // Add masterlistId prop
 }
 
 export function TagDetails({
   onAddTag,
   buttonText = "Add Tag",
   subgroupId, // Destructure subgroupId
+  masterlistId, // Destructure masterlistId
 }: TagDetailsProps) {
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [fileId, setFileId] = React.useState<number | null>(null);
 
-  // Fetch the latest master list file ID and tags from API
+  // Fetch tags based on the selected masterlist ID
   React.useEffect(() => {
     const fetchInitialData = async () => {
+      if (!masterlistId) return;
       try {
         setLoading(true);
-        const latestMasterList = await fetchLatestMasterList();
-        setFileId(latestMasterList.file_id);
-        const data = await fetchTagsByFileId(latestMasterList.file_id);
+        const data = await fetchTagsByFileId(masterlistId);
         setTags(data);
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -54,25 +53,24 @@ export function TagDetails({
     };
 
     fetchInitialData();
-  }, []);
+  }, [masterlistId]);
 
   // Fetch tags periodically without refreshing the whole modal
   React.useEffect(() => {
     const fetchTagsPeriodically = async () => {
-      if (fileId) {
-        try {
-          const data = await fetchTagsByFileId(fileId);
-          setTags(data);
-        } catch (error) {
-          console.error("Error fetching tags:", error);
-        }
+      if (!masterlistId) return;
+      try {
+        const data = await fetchTagsByFileId(masterlistId);
+        setTags(data);
+      } catch (error) {
+        console.error("Error fetching tags:", error);
       }
     };
 
     const intervalId = setInterval(fetchTagsPeriodically, 5000); // Poll every 5 seconds
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
-  }, [fileId]);
+  }, [masterlistId]);
 
   const filteredTags = tags.filter((tag) =>
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())

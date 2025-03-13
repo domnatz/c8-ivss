@@ -33,6 +33,8 @@ import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
+import { useAppSelector } from "@/hooks/hooks"; 
+import { RootState } from "@/store"; // Import RootState
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
@@ -44,6 +46,7 @@ export default function SubgroupEdit({
   onSelectSubgroupTag,
 }: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId); // Get selected masterlist ID from Redux state
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
@@ -243,6 +246,7 @@ export default function SubgroupEdit({
         <TagDetails
           onAddTag={handleAddTag}
           subgroupId={selectedSubgroup?.subgroup_id}
+          masterlistId={masterlistId} // Pass masterlistId prop
         />
       </div>
 
