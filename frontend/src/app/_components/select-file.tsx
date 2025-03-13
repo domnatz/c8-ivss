@@ -19,17 +19,15 @@ import { RootState } from "@/store";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface SelectFileProps {
-  className?: string;
-  onFileSelect?: (file: Masterlist) => void;
-  onClearSelection?: () => void; // Add new prop
-}
-
 export function SelectFile({
   className,
   onFileSelect,
   onClearSelection,
-}: SelectFileProps) {
+}: {
+  className?: string;
+  onFileSelect?: (file: Masterlist) => void;
+  onClearSelection?: () => void;
+}) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState<any[]>([]);
@@ -120,7 +118,7 @@ export function SelectFile({
           </DialogHeader>
 
           {isLoading ? (
-             <Skeleton className="w-full h-[30px] rounded-md" />
+            <Skeleton className="w-full h-[30px] rounded-md" />
           ) : displayFiles && displayFiles.length > 0 ? (
             <div className="max-h-60 overflow-y-auto space-y-2">
               {displayFiles.map((file) => (
