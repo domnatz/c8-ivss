@@ -15,6 +15,7 @@ import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
   TagIcon,
+  XCircleIcon
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -62,11 +63,11 @@ export default function SubgroupTagEdit({
         {/* Display selected subgroup tag name */}
         {selectedSubgroupTagId && (
           <span 
-            className="text-md text-blue-600 bg-blue-100 flex flex-row items-center gap-2 px-4 rounded-full cursor-pointer"
-            onClick={handleDeselectTag} // Add onClick handler
+            className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full "
             >
-            <TagIcon className="w-4 h-4" />
+            {/* <TagIcon className="w-4 h-4" /> */}
             {selectedSubgroupTagId.subgroup_tag_name}
+            <XCircleIcon className="w-4 h-4 cursor-pointer hover:text-blue-800" onClick={handleDeselectTag} />
           </span>
         )}
       </div>
@@ -112,8 +113,13 @@ export default function SubgroupTagEdit({
       
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
-      <Input placeholder="Make a formula..." className="bg-background"/>
-      
+        {selectedSubgroupTagId ? (
+          <Input placeholder="Make a formula..." className="bg-background"/>
+        ) : (
+          <span className="text-md justify-center flex flex-row text-center text-muted-foreground h-full items-center">
+            Select a subgroup tag first
+          </span>
+        )}
       </div>
     </div>
   );

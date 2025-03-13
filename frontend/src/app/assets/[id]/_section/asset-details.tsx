@@ -82,7 +82,7 @@ export default function AssetDetails() {
           onSelectSubgroupTag={(tag) => dispatch(assetAction.selectSubgroupTag(tag))} // Use dispatch to select tag
           onDeselectSubgroupTag={() => dispatch(assetAction.selectSubgroupTag(null))} // Use dispatch to deselect tag
         />
-        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />{" "}
+        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag}  />{" "}
         {/* Pass the selected subgroup tag */}
       </div>
     </div>

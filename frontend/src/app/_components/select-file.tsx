@@ -103,9 +103,9 @@ export function SelectFile({
         {/* Add Clear selection button at the top of dialog */}
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle>Select a File</DialogTitle>
-              <DialogDescription>Select a file to add tags</DialogDescription>
+            <div className="flex flex-col gap-1">
+              <DialogTitle>Masterfiles</DialogTitle>
+              <DialogDescription>select a file to add tags</DialogDescription>
             </div>
             {selectedMasterlistId && (
               <Button
