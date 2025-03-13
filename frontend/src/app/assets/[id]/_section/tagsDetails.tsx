@@ -122,7 +122,7 @@ export function TagDetails({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="flex flex-col gap-2 max-h-128 overflow-y-auto"> {/* Make the tags list scrollable */}
+          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto"> {/* Make the tags list scrollable */}
             {loading ? (
               <p className="text-center text-muted-foreground">
                 Loading tags...

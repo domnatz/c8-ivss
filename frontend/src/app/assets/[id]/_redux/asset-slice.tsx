@@ -64,7 +64,7 @@ export const assetSlice = createSlice({
       };
     },
 
-    selectSubgroupTag: (state, action: PayloadAction<number | null>) => {
+    selectSubgroupTag: (state, action: PayloadAction<Subgroup_tag | null>) => { // Update type to Subgroup_tag
       return {
         ...state,
         selectedSubgroupTagId: action.payload,

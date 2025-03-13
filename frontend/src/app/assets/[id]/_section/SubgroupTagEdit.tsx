@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,8 +15,6 @@ import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
   TagIcon,
-  ChevronUpDownIcon,
-  BookmarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -29,9 +28,8 @@ import {
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { createSubgroup } from "@/_actions/asset-actions";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Toggle } from "@/components/ui/toggle";
+import TemplateSelector from "@/app/assets/[id]/_section/_section/TemplateSelector";
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
@@ -41,24 +39,34 @@ export default function SubgroupTagEdit({
   selectedSubgroupTag,
 }: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedSubgroupTags, setSelectedSubgroupTags] =
-    React.useState<Subgroup_tag | null>(null);
+  const selectedSubgroupTagId = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTagId
+  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
     "newest"
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const params = useParams();
+  const dispatch = useAppDispatch(); // Add this line to use dispatch
+
+  // Add this function to handle tag deselection
+  const handleDeselectTag = () => {
+    dispatch({ type: 'assetSlice/selectSubgroupTag', payload: null });
+  };
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
-      <div className="flex flex-col justify-between items-start">
+      <div className="flex flex-col justify-between items-start gap-1">
         <h2 className="text-lg font-semibold">Tag Editor</h2>
         {/* Display selected subgroup tag name */}
-        {selectedSubgroupTag && (
-          <span className="text-lg text-foreground flex flex-row items-center gap-2">
-            {selectedSubgroupTag.subgroup_tag_name}
-            <TagIcon className="w-5 h-5 text-foreground" />
+        {selectedSubgroupTagId && (
+          <span 
+            className="text-md text-blue-600 bg-blue-100 flex flex-row items-center gap-2 px-4 rounded-full cursor-pointer"
+            onClick={handleDeselectTag} // Add onClick handler
+            >
+            <TagIcon className="w-4 h-4" />
+            {selectedSubgroupTagId.subgroup_tag_name}
           </span>
         )}
       </div>
@@ -73,7 +81,7 @@ export default function SubgroupTagEdit({
 
         <DropdownMenu>
           <DropdownMenuTrigger className="px-2 py-1 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
-            <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
+            <AdjustmentsVerticalIcon className="w-4 h-4 text-fo gap-2reground" />
             Sort
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -88,6 +96,7 @@ export default function SubgroupTagEdit({
           </DropdownMenuContent>
         </DropdownMenu>
 
+
         <Button
           variant="default"
           size="sm"
@@ -99,42 +108,13 @@ export default function SubgroupTagEdit({
         </Button>
       </div>
 
-      {/* Make this a separate Component*/}
-      <div className="flex flex-row  justify-between w-full gap-2">
-        <div className="flex flex-row gap-2">
-          <Select>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Template" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="light">Light</SelectItem>
-              <SelectItem value="dark">Dark</SelectItem>
-              <SelectItem value="system">System</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Dialog>
-            <DialogTrigger className="border rounded-md px-2 hover:text-blue-600">
-                <ChevronUpDownIcon className="h-5 w-5"/>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                <DialogDescription>
-                  This action cannot be undone. This will permanently delete your account
-                  and remove your data from our servers.
-                </DialogDescription>
-              </DialogHeader>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <Toggle variant="outline" className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-600 data-[state=on]:border-blue-300">
-          <BookmarkIcon className="h-5 w-5"/>
-          Save Template
-        </Toggle>
+      <TemplateSelector />
+      
+      {/* Display formula subgroup tags */}
+      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
+      <Input placeholder="Make a formula..." className="bg-background"/>
+      
       </div>
-
-      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto"></div>
     </div>
   );
 }

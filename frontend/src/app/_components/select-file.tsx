@@ -17,6 +17,7 @@ import { rootActions } from "../_redux/root-slice";
 import { Masterlist } from "@/models/masterlist";
 import { RootState } from "@/store";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SelectFileProps {
   className?: string;
@@ -119,7 +120,7 @@ export function SelectFile({
           </DialogHeader>
 
           {isLoading ? (
-            <p className="text-center py-4">Loading files...</p>
+             <Skeleton className="w-full h-[30px] rounded-md" />
           ) : displayFiles && displayFiles.length > 0 ? (
             <div className="max-h-60 overflow-y-auto space-y-2">
               {displayFiles.map((file) => (

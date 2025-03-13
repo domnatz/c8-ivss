@@ -8,6 +8,8 @@ import SubgroupEdit from "./SubgroupEdit";
 import SubgroupTagEdit from "./SubgroupTagEdit";
 import { getAssetById } from "@/_services/asset-service";
 import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks"; // Import hooks
+import { assetAction } from "@/app/assets/[id]/_redux/asset-slice"; // Import actions
 
 export default function AssetDetails() {
   const params = useParams();
@@ -20,8 +22,10 @@ export default function AssetDetails() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubgroupTag, setSelectedSubgroupTag] =
-    useState<Subgroup_tag | null>(null); // Add state for selected subgroup tag
+  const selectedSubgroupTag: Subgroup_tag | null = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTagId
+  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
+  const dispatch = useAppDispatch(); // Add this line to use dispatch
 
   useEffect(() => {
     // Log the raw and parsed values for debugging
@@ -75,7 +79,8 @@ export default function AssetDetails() {
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
         <SubgroupEdit
           selectedAsset={selectedAsset}
-          onSelectSubgroupTag={setSelectedSubgroupTag} // Pass the setter function
+          onSelectSubgroupTag={(tag) => dispatch(assetAction.selectSubgroupTag(tag))} // Use dispatch to select tag
+          onDeselectSubgroupTag={() => dispatch(assetAction.selectSubgroupTag(null))} // Use dispatch to deselect tag
         />
         <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />{" "}
         {/* Pass the selected subgroup tag */}
