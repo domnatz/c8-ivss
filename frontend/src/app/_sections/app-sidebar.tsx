@@ -47,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader className="p-0">
-        <div className="flex gap-2 w-full p-4 align-top">
+        <div className="flex gap-2 w-full p-4 pb-0 align-top">
           <div className="flex-row flex gap-2">
             <Image
               src={icon}

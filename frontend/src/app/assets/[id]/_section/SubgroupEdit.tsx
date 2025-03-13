@@ -33,17 +33,22 @@ import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
+import { useAppSelector } from "@/hooks/hooks"; 
+import { RootState } from "@/store"; // Import RootState
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
   onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
+  onDeselectSubgroupTag: () => void; // Add prop for deselecting subgroup tag
 }
 
 export default function SubgroupEdit({
   selectedAsset,
   onSelectSubgroupTag,
+  onDeselectSubgroupTag,
 }: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId); // Get selected masterlist ID from Redux state
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
@@ -167,6 +172,11 @@ export default function SubgroupEdit({
     onSelectSubgroupTag(tag); // Call the function to set the selected subgroup tag
   };
 
+  const handleTagDeselect = () => {
+    setSelectedTagId(null); // Deselect the tag
+    onDeselectSubgroupTag(); // Call the function to deselect the subgroup tag
+  };
+
   if (!selectedAsset) {
     return (
       <div className="w-full flex items-center justify-center">
@@ -243,6 +253,7 @@ export default function SubgroupEdit({
         <TagDetails
           onAddTag={handleAddTag}
           subgroupId={selectedSubgroup?.subgroup_id}
+          masterlistId={masterlistId} // Pass masterlistId prop
         />
       </div>
 
@@ -260,7 +271,11 @@ export default function SubgroupEdit({
                         ? "bg-orange-50 text-orange-600"
                         : ""
                     }`} // Highlight selected tag
-                    onClick={() => handleTagClick(tag)} // Add onClick handler
+                    onClick={() =>
+                      tag.subgroup_tag_id === selectedTagId
+                        ? handleTagDeselect() // Deselect if already selected
+                        : handleTagClick(tag)
+                    } // Add onClick handler
                   >
                     {tag.subgroup_tag_name}
                   </Button>

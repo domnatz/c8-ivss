@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,6 +15,7 @@ import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
   TagIcon,
+  XCircleIcon
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -27,7 +29,8 @@ import {
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { createSubgroup } from "@/_actions/asset-actions";
+import TemplateSelector from "@/app/assets/[id]/_section/_section/TemplateSelector";
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
@@ -37,24 +40,34 @@ export default function SubgroupTagEdit({
   selectedSubgroupTag,
 }: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedSubgroupTags, setSelectedSubgroupTags] =
-    React.useState<Subgroup_tag | null>(null);
+  const selectedSubgroupTagId = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTagId
+  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
     "newest"
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const params = useParams();
+  const dispatch = useAppDispatch(); // Add this line to use dispatch
+
+  // Add this function to handle tag deselection
+  const handleDeselectTag = () => {
+    dispatch({ type: 'assetSlice/selectSubgroupTag', payload: null });
+  };
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
-      <div className="flex flex-col justify-between items-start">
+      <div className="flex flex-col justify-between items-start gap-1">
         <h2 className="text-lg font-semibold">Tag Editor</h2>
         {/* Display selected subgroup tag name */}
-        {selectedSubgroupTag && (
-          <span className="text-lg text-foreground flex flex-row items-center gap-2">
-            {selectedSubgroupTag.subgroup_tag_name}
-            <TagIcon className="w-5 h-5 text-foreground" />
+        {selectedSubgroupTagId && (
+          <span 
+            className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full "
+            >
+            {/* <TagIcon className="w-4 h-4" /> */}
+            {selectedSubgroupTagId.subgroup_tag_name}
+            <XCircleIcon className="w-4 h-4 cursor-pointer hover:text-blue-800" onClick={handleDeselectTag} />
           </span>
         )}
       </div>
@@ -69,7 +82,7 @@ export default function SubgroupTagEdit({
 
         <DropdownMenu>
           <DropdownMenuTrigger className="px-2 py-1 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
-            <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
+            <AdjustmentsVerticalIcon className="w-4 h-4 text-fo gap-2reground" />
             Sort
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -84,8 +97,9 @@ export default function SubgroupTagEdit({
           </DropdownMenuContent>
         </DropdownMenu>
 
+
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           // onClick={handleAddSubgroup}
           disabled={loading}
@@ -95,9 +109,18 @@ export default function SubgroupTagEdit({
         </Button>
       </div>
 
-      <div className="flex flex-row w-full gap-2"></div>
-
-      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto"></div>
+      <TemplateSelector />
+      
+      {/* Display formula subgroup tags */}
+      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
+        {selectedSubgroupTagId ? (
+          <Input placeholder="Make a formula..." className="bg-background"/>
+        ) : (
+          <span className="text-md justify-center flex flex-row text-center text-muted-foreground h-full items-center">
+            Select a subgroup tag first
+          </span>
+        )}
+      </div>
     </div>
   );
 }
