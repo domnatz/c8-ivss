@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,12 +16,12 @@ export default function BreadcrumbNav() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink href="/">Home</BreadcrumbLink>
+          <BreadcrumbLink href="/assets">Home</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
-          <BreadcrumbItem >
-              {state.currentAsset?.asset_name || "Loading..."}
-          </BreadcrumbItem>
+        <BreadcrumbItem>
+          {state.currentAsset?.asset_name || "Loading..."}
+        </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   );

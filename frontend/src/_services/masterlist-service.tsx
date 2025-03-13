@@ -1,5 +1,8 @@
+// Define a fallback URL to use if environment variable isn't set
+const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+
 export async function fetchMasterlist() {
-  const response = await fetch(`http://localhost:8000/masterlist/latest`); // Correct endpoint
+  const response = await fetch(`${BASE_URL}/masterlist/latest`); // Correct endpoint
   if (!response.ok) {
     throw new Error(`Failed to fetch masterlist: ${response.statusText}`);
   }
@@ -7,9 +10,11 @@ export async function fetchMasterlist() {
 }
 
 export async function fetchMasterlistByFileId(file_id: number) {
-  const response = await fetch(`http://localhost:8000/masterlist/${file_id}`);
+  const response = await fetch(`${BASE_URL}/masterlist/${file_id}`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch masterlist by file ID: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch masterlist by file ID: ${response.statusText}`
+    );
   }
   return response.json();
 }
@@ -18,7 +23,7 @@ export async function uploadMasterlistFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("http://localhost:8000/upload_masterlist", {
+  const response = await fetch(`${BASE_URL}/upload_masterlist`, {
     method: "POST",
     body: formData,
   });
@@ -32,7 +37,7 @@ export async function uploadMasterlistFile(file: File) {
 
 // Fetch all masterlist files
 export async function fetchAllMasterlists() {
-  const response = await fetch(`http://localhost:8000/masterlists`);
+  const response = await fetch(`${BASE_URL}/masterlists`);
   if (!response.ok) {
     throw new Error(`Failed to fetch all masterlists: ${response.statusText}`);
   }

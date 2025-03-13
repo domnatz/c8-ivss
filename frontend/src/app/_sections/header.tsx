@@ -2,12 +2,11 @@
 
 import { CubeIcon } from "@heroicons/react/24/outline";
 import { Label } from "@/components/ui/label";
-import BreadcrumbNav from "../[assetId]/_section/BreadcrumbNav";
 import { useAppSelector } from "@/hooks/hooks";
+import BreadcrumbNav from "./nav-breadcrumb";
 
 export default function Header() {
   const state = useAppSelector((state) => state.rootState);
-  console.log("hey", state);
 
   return (
     <div>

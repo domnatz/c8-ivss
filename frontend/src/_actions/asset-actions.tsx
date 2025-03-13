@@ -7,7 +7,11 @@ import {
   renameSubgroup,
   uploadMasterlist,
 } from "@/_services/asset-service";
-import { fetchMasterlist, fetchMasterlistByFileId, fetchAllMasterlists } from "@/_services/masterlist-service"; // Import fetchAllMasterlists
+import {
+  fetchMasterlist,
+  fetchMasterlistByFileId,
+  fetchAllMasterlists,
+} from "@/_services/masterlist-service"; // Import fetchAllMasterlists
 import { revalidatePath } from "next/cache";
 
 export async function createAsset(_prevState: any = null) {
@@ -63,7 +67,7 @@ export async function updateSubgroupName(
   try {
     const response = await renameSubgroup(subgroupId, newName);
     await response.json();
-    revalidatePath(`/${assetId}`);
+    revalidatePath(`/assets/${assetId}`);
     return { success: true };
   } catch (error: any) {
     console.error("There was an error renaming the subgroup!", error);
@@ -89,7 +93,9 @@ export async function uploadMasterlistFile(file: File, _prevState: any = null) {
 /// Fetch masterlist action
 export async function getMasterlist(fileId?: number) {
   try {
-    const masterlist = fileId ? await fetchMasterlistByFileId(fileId) : await fetchMasterlist(); // Fetch latest if no fileId
+    const masterlist = fileId
+      ? await fetchMasterlistByFileId(fileId)
+      : await fetchMasterlist(); // Fetch latest if no fileId
     return { success: true, data: masterlist };
   } catch (error: any) {
     console.error("There was an error fetching the masterlist!", error);

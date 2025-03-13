@@ -102,16 +102,18 @@ export function SubgroupList({
 
   return (
     <SidebarMenu>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-between text-xs rounded-none border-b-1 mx-2"
-        onClick={handleAddSubgroup}
-        disabled={isPending}
-      >
+      <div className="flex items-center font-semibold border-b-1 text-xs px-4 justify-between w-full">
         <span>Subgroups</span>
-        <PlusIcon className="w-5 h-5" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-md"
+          onClick={handleAddSubgroup}
+          disabled={isPending}
+        >
+          <PlusIcon className="w-5 h-5" />
+        </Button>
+      </div>
 
       {Array.isArray(subgroups) &&
         subgroups.map((subgroup) => {

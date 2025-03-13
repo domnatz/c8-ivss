@@ -1,6 +1,7 @@
 import { RootState } from "./root-state";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Asset } from "../../models/asset";
+import { Masterlist } from "../../models/masterlist";
 
 export const initialState: RootState = {
   menuOpen: false,
@@ -10,6 +11,11 @@ export const initialState: RootState = {
   editingAssetId: null,
   editingSubgroupId: null,
   editingValues: {},
+  // Initialize masterlist state
+  masterlists: [],
+  selectedMasterlistId: null,
+  masterlistLoading: false,
+  masterlistUploading: false,
 };
 
 export const rootSlice = createSlice({
@@ -46,7 +52,6 @@ export const rootSlice = createSlice({
         searchQuery: action.payload,
       };
     },
-    // New reducers for editing state
     editingAssetIdSet(state: RootState, action: PayloadAction<number | null>) {
       return {
         ...state,
@@ -87,6 +92,41 @@ export const rootSlice = createSlice({
         editingAssetId: null,
         editingSubgroupId: null,
         editingValues: newValues,
+      };
+    },
+    // Masterlist actions
+    masterlistsSet(state: RootState, action: PayloadAction<Masterlist[]>) {
+      return {
+        ...state,
+        masterlists: action.payload,
+        masterlistLoading: false,
+      };
+    },
+    selectedMasterlistIdSet(
+      state: RootState,
+      action: PayloadAction<number | null>
+    ) {
+      return {
+        ...state,
+        selectedMasterlistId: action.payload,
+      };
+    },
+    masterlistLoadingSet(state: RootState, action: PayloadAction<boolean>) {
+      return {
+        ...state,
+        masterlistLoading: action.payload,
+      };
+    },
+    masterlistUploadingSet(state: RootState, action: PayloadAction<boolean>) {
+      return {
+        ...state,
+        masterlistUploading: action.payload,
+      };
+    },
+    addMasterlist(state: RootState, action: PayloadAction<Masterlist>) {
+      return {
+        ...state,
+        masterlists: [...state.masterlists, action.payload],
       };
     },
   },

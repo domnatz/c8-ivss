@@ -19,8 +19,8 @@ import { updateAssetName } from "@/_actions/asset-actions";
 import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { rootActions } from "@/app/_redux/root-slice";
-import { SubgroupList } from "./subgroup-list";
 import { Asset } from "@/models/asset";
+import { SubgroupList } from "./subgroup-list";
 
 interface AssetItemProps {
   asset: Asset;
@@ -115,7 +115,7 @@ export function AssetItem({
               onClick={() => {
                 // Only navigate if not in edit mode
                 if (editingAssetId !== asset.asset_id) {
-                  router.push(`/${asset.asset_id}`);
+                  router.push(`/assets/${asset.asset_id}`);
                 }
               }}
             >

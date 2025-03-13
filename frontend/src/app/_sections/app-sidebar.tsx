@@ -13,16 +13,15 @@ import icon from "../../../public/icon_calibr8.png";
 import { getAssets } from "@/_services/asset-service";
 import { rootActions } from "../_redux/root-slice";
 import { useAppDispatch } from "@/hooks/hooks";
-import { FilterAssets } from "@/components/assets/filter-assets";
-import { UploadMasterlist } from "@/components/assets/upload-masterlist";
-import { AddAssetButton } from "@/components/assets/add-asset-button";
-import { AssetList } from "@/components/assets/asset-list";
+import { FilterAssets } from "@/app/_components/filter-assets";
+import { UploadMasterlist } from "@/app/_components/upload-masterlist";
+import { AddAssetButton } from "@/app/_components/add-asset-button";
+import { AssetList } from "@/app/_components/asset-list";
 import { Asset } from "../../models/asset";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const dispatch = useAppDispatch();
 
-  // Non-async function to fetch assets
   const fetchAssets = useCallback(() => {
     getAssets()
       .then((data) => {
@@ -34,7 +33,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
   }, [dispatch]);
 
-  // Handler to set current asset when an asset is selected
   const handleAssetSelect = useCallback(
     (asset: Asset) => {
       dispatch(rootActions.assetChanged(asset));
@@ -42,7 +40,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     [dispatch]
   );
 
-  // Load assets on component mount
   useEffect(() => {
     fetchAssets();
   }, [fetchAssets]);

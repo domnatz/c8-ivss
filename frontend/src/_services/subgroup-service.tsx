@@ -1,10 +1,13 @@
 import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag type
 
+// Define a fallback URL to use if environment variable isn't set
+const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+
 export function addTagToSubgroup(
   subgroupId: number,
   tagData: { tag_id: number; tag_name: string }
 ) {
-  return fetch(`http://localhost:8000/subgroups/${subgroupId}/tags`, {
+  return fetch(`${BASE_URL}/subgroups/${subgroupId}/tags`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -16,8 +19,10 @@ export function addTagToSubgroup(
   });
 }
 
-export async function fetchTagsBySubgroupId(subgroupId: number): Promise<Subgroup_tag[]> {
-  const response = await fetch(`http://localhost:8000/subgroups/${subgroupId}/tags`);
+export async function fetchTagsBySubgroupId(
+  subgroupId: number
+): Promise<Subgroup_tag[]> {
+  const response = await fetch(`${BASE_URL}/subgroups/${subgroupId}/tags`);
   if (response.ok) {
     const data = await response.json();
     return data as Subgroup_tag[];

@@ -40,13 +40,13 @@ async def get_db():
 async def read_root():
     return {"message": "Welcome to the FastAPI Backend!"}
 
-@app.get("/assets")
+@app.get("/api/assets")
 async def get_assets(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets))
     assets = result.scalars().all()
     return assets
 
-@app.get("/assets/{asset_id}")
+@app.get("/api/assets/{asset_id}")
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching asset with asset_id: {asset_id}")
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
@@ -59,7 +59,7 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
         "asset_type": asset.asset_type,
     }
 
-@app.get("/assets/{asset_id}/subgroups")
+@app.get("/api/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
@@ -67,7 +67,7 @@ async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
     return subgroups
 
-@app.get("/subgroups/{subgroup_id}")
+@app.get("/api/subgroups/{subgroup_id}")
 async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching subgroup for subgroup_id: {subgroup_id}")
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
@@ -82,7 +82,7 @@ class AssetCreate(BaseModel):
     asset_name: str
     asset_type: str
 
-@app.post("/assets")
+@app.post("/api/assets")
 async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
     new_asset = models.Assets(asset_name=asset.asset_name, asset_type=asset.asset_type)
     db.add(new_asset)
@@ -93,7 +93,7 @@ async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
 class AssetRename(BaseModel):
     asset_name: str
 
-@app.put("/assets/{asset_id}")
+@app.put("/api/assets/{asset_id}")
 async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
     existing_asset = result.scalars().first()
@@ -108,7 +108,7 @@ async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Dep
 class SubgroupCreate(BaseModel):
     subgroup_name: str
 
-@app.post("/assets/{asset_id}/subgroups")
+@app.post("/api/assets/{asset_id}/subgroups")
 async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
     existing_asset = result.scalars().first()
@@ -127,7 +127,7 @@ async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSess
 class SubgroupRename(BaseModel):
     subgroup_name: str
 
-@app.put("/subgroups/{subgroup_id}")
+@app.put("/api/subgroups/{subgroup_id}")
 async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
     existing_subgroup = result.scalars().first()
@@ -142,7 +142,7 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
 class Tag(BaseModel):
     tag_name: str
 
-@app.post("/upload_masterlist")
+@app.post("/api/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Invalid file type")
@@ -210,7 +210,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     
 
-@app.get("/tags")
+@app.get("/api/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Tags).where(models.Tags.file_id == file_id))
     tags = result.scalars().all()
@@ -218,7 +218,7 @@ async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tags not found for the given file ID")
     return tags
 
-@app.get("/masterlist/latest")
+@app.get("/api/masterlist/latest")
 async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).order_by(models.MasterList.file_id.desc()).limit(1))
     masterlist = result.scalars().first()
@@ -227,7 +227,7 @@ async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
 
-@app.get("/masterlist/{file_id}")
+@app.get("/api/masterlist/{file_id}")
 async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
     masterlist = result.scalars().first()
@@ -239,7 +239,7 @@ class SubgroupTagCreate(BaseModel):
     tag_id: int
     tag_name: str
 
-@app.post("/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
+@app.post("/api/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
     try:
@@ -262,7 +262,7 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
         print(f"Error adding tag to subgroup: {e}")
         return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
     
-@app.get("/subgroups/{subgroup_id}/tags")
+@app.get("/api/subgroups/{subgroup_id}/tags")
 async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
     tags = result.scalars().all()
@@ -270,7 +270,7 @@ async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
     return tags
 
-@app.get("/masterlists")
+@app.get("/api/masterlists")
 async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList))
     masterlists = result.scalars().all()

@@ -29,12 +29,13 @@ import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
 
-
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
 }
 
-export default function SubgroupTagEdit({ selectedSubgroupTag }: SubgroupTagEditProps) {
+export default function SubgroupTagEdit({
+  selectedSubgroupTag,
+}: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedSubgroupTags, setSelectedSubgroupTags] =
     React.useState<Subgroup_tag | null>(null);
@@ -48,7 +49,6 @@ export default function SubgroupTagEdit({ selectedSubgroupTag }: SubgroupTagEdit
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start">
-      
         <h2 className="text-lg font-semibold">Tag Editor</h2>
         {/* Display selected subgroup tag name */}
         {selectedSubgroupTag && (
@@ -95,13 +95,9 @@ export default function SubgroupTagEdit({ selectedSubgroupTag }: SubgroupTagEdit
         </Button>
       </div>
 
-      <div className="flex flex-row w-full gap-2">
+      <div className="flex flex-row w-full gap-2"></div>
 
-      </div>
-
-      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
-
-      </div>
+      <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto"></div>
     </div>
   );
 }

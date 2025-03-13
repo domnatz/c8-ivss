@@ -11,15 +11,25 @@ import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag
 
 export default function AssetDetails() {
   const params = useParams();
-  const numericAssetId = Number(params.assetId); // Convert assetId to a number
+
+  // Get the raw param value for debugging
+  const rawId = params.id;
+  // Make sure we're using the correct parameter name and properly convert to number
+  const numericAssetId = typeof rawId === "string" ? parseInt(rawId, 10) : NaN;
+
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubgroupTag, setSelectedSubgroupTag] = useState<Subgroup_tag | null>(null); // Add state for selected subgroup tag
+  const [selectedSubgroupTag, setSelectedSubgroupTag] =
+    useState<Subgroup_tag | null>(null); // Add state for selected subgroup tag
 
   useEffect(() => {
-    if (!numericAssetId) {
-      setError("Invalid asset ID");
+    // Log the raw and parsed values for debugging
+    console.log("Raw ID param:", rawId);
+    console.log("Parsed numeric asset ID:", numericAssetId);
+
+    if (!numericAssetId || isNaN(numericAssetId)) {
+      setError(`Invalid asset ID: ${rawId}`);
       setLoading(false);
       return;
     }
@@ -30,9 +40,10 @@ export default function AssetDetails() {
         const asset = await getAssetById(numericAssetId);
         setSelectedAsset(asset);
         setError(null);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching asset details:", err);
-        setError("Failed to load asset details");
+        // Provide more detailed error message
+        setError(err?.message || "Failed to load asset details");
         setSelectedAsset(null);
       } finally {
         setLoading(false);
@@ -40,7 +51,7 @@ export default function AssetDetails() {
     };
 
     fetchAssetDetails();
-  }, [numericAssetId]);
+  }, [rawId, numericAssetId]);
 
   if (loading) {
     return <div>Loading asset details...</div>;
@@ -62,11 +73,12 @@ export default function AssetDetails() {
   return (
     <div className="py-4 w-full h-full">
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
-        <SubgroupEdit 
-          selectedAsset={selectedAsset} 
+        <SubgroupEdit
+          selectedAsset={selectedAsset}
           onSelectSubgroupTag={setSelectedSubgroupTag} // Pass the setter function
         />
-        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} /> {/* Pass the selected subgroup tag */}
+        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />{" "}
+        {/* Pass the selected subgroup tag */}
       </div>
     </div>
   );

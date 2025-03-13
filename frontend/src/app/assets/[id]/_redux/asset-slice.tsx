@@ -8,18 +8,18 @@ export const assetSlice = createSlice({
   name: "assetSlice",
   initialState,
   reducers: {
-    setAsset: (state, action: PayloadAction<Asset>) => {
+    assetLoaded: (state, action: PayloadAction<Asset>) => {
       return { ...state, ...action.payload };
     },
 
-    addSubgroup: (state, action: PayloadAction<Subgroup>) => {
+    subgroupAdded: (state, action: PayloadAction<Subgroup>) => {
       return {
         ...state,
         subgroups: [...(state.subgroups || []), action.payload],
       };
     },
 
-    updateSubgroupName: (
+    subgroupNameUpdated: (
       state,
       action: PayloadAction<{ id: number; name: string }>
     ) => {
@@ -33,7 +33,7 @@ export const assetSlice = createSlice({
       };
     },
 
-    addTagToSubgroup: (
+    subgroupTagAdded: (
       state,
       action: PayloadAction<{
         subgroupId: number;
@@ -49,6 +49,42 @@ export const assetSlice = createSlice({
                 ...subgroup,
                 subgroup_tags: [...(subgroup.subgroup_tags || []), tag],
               }
+            : subgroup
+        ),
+      };
+    },
+
+    // New reducers for selecting subgroups and tags
+    selectSubgroup: (state, action: PayloadAction<number | null>) => {
+      return {
+        ...state,
+        selectedSubgroupId: action.payload,
+        // Reset selected tag when changing subgroups
+        selectedSubgroupTagId: null,
+      };
+    },
+
+    selectSubgroupTag: (state, action: PayloadAction<number | null>) => {
+      return {
+        ...state,
+        selectedSubgroupTagId: action.payload,
+      };
+    },
+
+    // Add a reducer to update tags for a subgroup
+    updateSubgroupTags: (
+      state,
+      action: PayloadAction<{
+        subgroupId: number;
+        tags: Subgroup_tag[];
+      }>
+    ) => {
+      const { subgroupId, tags } = action.payload;
+      return {
+        ...state,
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === subgroupId
+            ? { ...subgroup, subgroup_tags: tags }
             : subgroup
         ),
       };

@@ -1,6 +1,9 @@
-import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
-import { Tags } from '@/app/[assetId]/_section/tagsDetails';
+import { Tags } from "@/models/tags";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
+
+// Define a fallback URL to use if environment variable isn't set
+const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
 
 export const uploadTags = async (file: File): Promise<void> => {
   const reader = new FileReader();
@@ -8,31 +11,31 @@ export const uploadTags = async (file: File): Promise<void> => {
     reader.onload = async (e) => {
       const data = e.target?.result;
       let tags: Tags[] = [];
-      if (file.name.endsWith('.csv')) {
+      if (file.name.endsWith(".csv")) {
         Papa.parse(data as string, {
           header: true,
           complete: (results) => {
             tags = results.data as Tags[];
           },
         });
-      } else if (file.name.endsWith('.xlsx')) {
-        const workbook = XLSX.read(data, { type: 'binary' });
+      } else if (file.name.endsWith(".xlsx")) {
+        const workbook = XLSX.read(data, { type: "binary" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         tags = XLSX.utils.sheet_to_json(sheet) as Tags[];
       }
       // Send tags to backend
-      const response = await fetch('http://localhost:8000/upload_masterlist', {
-        method: 'POST',
+      const response = await fetch(`${BASE_URL}/upload_masterlist`, {
+        method: "POST",
         body: JSON.stringify(tags),
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
       if (response.ok) {
         resolve();
       } else {
-        reject(new Error('Failed to upload tags'));
+        reject(new Error("Failed to upload tags"));
       }
     };
     reader.readAsBinaryString(file);
@@ -40,22 +43,25 @@ export const uploadTags = async (file: File): Promise<void> => {
 };
 
 export const fetchTagsByFileId = async (fileId: number): Promise<Tags[]> => {
-  const response = await fetch(`http://localhost:8000/tags?file_id=${fileId}`);
+  const response = await fetch(`${BASE_URL}/tags?file_id=${fileId}`);
   if (response.ok) {
     const data = await response.json();
     return data as Tags[];
   } else {
-    throw new Error('Failed to fetch tags');
+    throw new Error("Failed to fetch tags");
   }
 };
 
-export const fetchLatestMasterList = async (): Promise<{ file_id: number; file_name: string }> => {
-  const response = await fetch('http://localhost:8000/masterlist/latest');
+export const fetchLatestMasterList = async (): Promise<{
+  file_id: number;
+  file_name: string;
+}> => {
+  const response = await fetch(`${BASE_URL}/masterlist/latest`);
   if (response.ok) {
     const data = await response.json();
     return data;
   } else {
-    throw new Error('Failed to fetch latest master list');
+    throw new Error("Failed to fetch latest master list");
   }
 };
 
@@ -64,7 +70,7 @@ export function addTagToSubgroup(
   subgroupId: number,
   tagData: { tag_id: number; tag_name: string }
 ) {
-  return fetch(`http://localhost:8000/subgroups/${subgroupId}/tags`, {
+  return fetch(`${BASE_URL}/subgroups/${subgroupId}/tags`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
