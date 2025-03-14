@@ -33,22 +33,24 @@ import { toast } from "react-toastify";
 import { createSubgroup } from "@/_actions/asset-actions";
 import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
-import { useAppSelector } from "@/hooks/hooks"; 
+import { useAppSelector } from "@/hooks/hooks";
 import { RootState } from "@/store"; // Import RootState
 
 interface SubgroupEditProps {
   selectedAsset: Asset | null;
+  assetId: number; // Remove assetId prop
   onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
   onDeselectSubgroupTag: () => void; // Add prop for deselecting subgroup tag
 }
 
 export default function SubgroupEdit({
   selectedAsset,
+  assetId,
   onSelectSubgroupTag,
   onDeselectSubgroupTag,
 }: SubgroupEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId); // Get selected masterlist ID from Redux state
+  const state = useAppSelector((state: RootState) => state.rootState);
   const [selectedSubgroup, setSelectedSubgroup] =
     React.useState<Subgroup | null>(null);
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
@@ -57,9 +59,6 @@ export default function SubgroupEdit({
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const [selectedTagId, setSelectedTagId] = React.useState<number | null>(null); // Add state for selected tag ID
-
-  const params = useParams();
-  const assetId = Number(params.id); // Change from params.assetId to params.id
 
   // Select the first subgroup by default when asset changes
   React.useEffect(() => {
@@ -77,7 +76,6 @@ export default function SubgroupEdit({
   // Fetch tags when selected subgroup changes
   React.useEffect(() => {
     if (selectedSubgroup) {
-      console.log("Selected Subgroup:", selectedSubgroup);
       fetchTagsBySubgroupId(selectedSubgroup.subgroup_id)
         .then((tags) => {
           setSubgroupTags(tags);
@@ -121,7 +119,6 @@ export default function SubgroupEdit({
         );
       }
     } catch (error) {
-      console.error("Error creating subgroup:", error);
       toast.error("Failed to create subgroup");
     } finally {
       setLoading(false);
@@ -160,7 +157,6 @@ export default function SubgroupEdit({
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error("Error adding tag:", error);
       toast.error("Failed to add tag to subgroup");
     } finally {
       setLoading(false);
@@ -253,7 +249,7 @@ export default function SubgroupEdit({
         <TagDetails
           onAddTag={handleAddTag}
           subgroupId={selectedSubgroup?.subgroup_id}
-          masterlistId={masterlistId} // Pass masterlistId prop
+          masterlistId={state.selectedMasterlistId} // Pass masterlistId prop
         />
       </div>
 
