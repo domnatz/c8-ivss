@@ -100,7 +100,7 @@ export default function SubgroupTagEdit({
       </div>
       
       <TemplateSelector />
-      <AddSubgroupTagButton />
+      {/* <AddSubgroupTagButton /> */}
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTagId ? (
