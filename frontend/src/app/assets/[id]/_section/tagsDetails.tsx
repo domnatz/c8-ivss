@@ -13,56 +13,66 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
-import { fetchTagsByFileId } from "@/_services/tag-service";
-import { addTagToSubgroupAction } from "@/_actions/tag-actions";
+import {
+  fetchTagsByFileId,
+} from "@/_services/tag-service";
+import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
-import { useDispatch, useSelector } from "react-redux";
-import { assetAction } from "../_redux/asset-slice";
-import { RootState } from "@/store";
 
 interface TagDetailsProps {
   onAddTag: (tag: Tags) => void;
   buttonText?: string;
-  subgroupId: number | undefined;
-  masterlistId: number | null;
+  subgroupId: number | undefined; // Add subgroupId prop
+  masterlistId: number | null; // Add masterlistId prop
 }
 
 export function TagDetails({
   onAddTag,
   buttonText = "Add Tag",
-  subgroupId,
-  masterlistId,
+  subgroupId, // Destructure subgroupId
+  masterlistId, // Destructure masterlistId
 }: TagDetailsProps) {
-  const dispatch = useDispatch();
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  // Get tags from Redux store instead of local state
-  const state = useSelector((state: RootState) => state.assetState);
-
-  // Fetch tags when modal opens or masterlistId changes
-  const fetchTags = React.useCallback(async () => {
-    if (!masterlistId) return;
-    try {
-      setLoading(true);
-      const data = await fetchTagsByFileId(masterlistId);
-      dispatch(assetAction.availableTagsLoaded(data));
-    } catch (error) {
-      console.error("Error fetching tags:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [masterlistId, dispatch]);
-
-  // Fetch tags when modal opens or masterlistId changes
+  // Fetch tags based on the selected masterlist ID
   React.useEffect(() => {
-    if (open && masterlistId) {
-      fetchTags();
-    }
-  }, [open, masterlistId, fetchTags]);
+    const fetchInitialData = async () => {
+      if (!masterlistId) return;
+      try {
+        setLoading(true);
+        const data = await fetchTagsByFileId(masterlistId);
+        setTags(data);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredTags = state.availableTags.filter((tag) =>
+    fetchInitialData();
+  }, [masterlistId]);
+
+  // Fetch tags periodically without refreshing the whole modal
+  React.useEffect(() => {
+    const fetchTagsPeriodically = async () => {
+      if (!masterlistId) return;
+      try {
+        const data = await fetchTagsByFileId(masterlistId);
+        setTags(data);
+      } catch (error) {
+        console.error("Error fetching tags:", error);
+      }
+    };
+
+    const intervalId = setInterval(fetchTagsPeriodically, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  }, [masterlistId]);
+
+  const filteredTags = tags.filter((tag) =>
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -77,7 +87,7 @@ export function TagDetails({
         subgroupId,
         tag.tag_id,
         tag.tag_name
-      );
+      ); // Add tag to subgroup
       if (result.success) {
         onAddTag(tag);
         setOpen(false);
@@ -112,7 +122,7 @@ export function TagDetails({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto"> {/* Make the tags list scrollable */}
             {loading ? (
               <p className="text-center text-muted-foreground">
                 Loading tags...

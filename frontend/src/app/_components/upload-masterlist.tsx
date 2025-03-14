@@ -32,12 +32,14 @@ export function UploadMasterlist({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
+      // Clear any previously selected existing file
       setSelectedExistingFile(null);
     }
   };
 
   const handleExistingFileSelect = (file: Masterlist) => {
     setSelectedExistingFile(file);
+    // Clear any previously selected new file
     setSelectedFile(null);
 
     toast.success(`Selected existing file: ${file.file_name}`);
@@ -55,7 +57,9 @@ export function UploadMasterlist({
       return;
     }
 
+    // If we have an existing file selected, we don't need to upload
     if (selectedExistingFile) {
+      // Here you would implement logic to use the existing file
       toast.info(`Using existing file: ${selectedExistingFile.file_name}`);
       onUploadSuccess();
       return;
@@ -93,55 +97,37 @@ export function UploadMasterlist({
         className || ""
       }`}
     >
-      <div className="flex flex-row items-center gap-2 w-full">
-        {selectedFile || selectedExistingFile ? (
-          <div className="w-full bg-blue-50 p-1.5 rounded-sm border border-blue-200 flex justify-between items-center">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
-                  selectedFile
-                    ? "bg-green-100 text-green-800"
-                    : "bg-blue-100 text-blue-800"
-                }`}
-              >
-                {selectedFile ? "New File" : "Existing"}
-              </span>
-              <p
-                className="text-xs font-medium truncate min-w-0 flex-1"
-                title={
-                  selectedFile
-                    ? selectedFile.name
-                    : selectedExistingFile?.file_name
-                }
-              >
-                {selectedFile
-                  ? selectedFile.name
-                  : selectedExistingFile?.file_name}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 flex-shrink-0 ml-1 hover:bg-blue-100"
-              onClick={clearSelectedFile}
-              title="Clear selection"
-            >
-              <XIcon className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <Input
-            type="file"
-            accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            className="w-full file:text-sm rounded-sm"
-            id="masterlist"
-            onChange={handleFileChange}
-          />
-        )}
-        {!selectedFile && !selectedExistingFile && (
-          <SelectFile onFileSelect={handleExistingFileSelect} />
-        )}
+      <div className="flex flex-row items-center gap-2">
+        <Input
+          type="file"
+          accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          className="w-full file:text-sm rounded-sm"
+          id="masterlist"
+          onChange={handleFileChange}
+          disabled={!!selectedExistingFile}
+        />
+        <SelectFile onFileSelect={handleExistingFileSelect} />
       </div>
+
+      {selectedExistingFile && (
+        <div className="bg-blue-50 p-2 rounded-sm border border-blue-200 w-full flex justify-between items-center">
+          <p className="text-sm text-blue-700">
+            Selected existing file:{" "}
+            <span className="font-semibold">
+              {selectedExistingFile.file_name}
+            </span>
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={clearSelectedFile}
+            title="Clear selection"
+          >
+            <XIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <Button
         className="w-full rounded-sm"

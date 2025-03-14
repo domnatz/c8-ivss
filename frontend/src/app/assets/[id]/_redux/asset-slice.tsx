@@ -1,47 +1,21 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { initialState } from "./asset-state";
 import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
-import { Tags } from "@/models/tags";
-import { AssetState } from "./asset-state";
-
-const initialState: AssetState = {
-  asset: {
-    asset_id: 0,
-    asset_type: "",
-    asset_name: "",
-    subgroups: [],
-  },
-  selectedSubgroupId: null,
-  selectedSubgroupTagId: null,
-  availableTags: [],
-};
 
 export const assetSlice = createSlice({
   name: "assetSlice",
   initialState,
   reducers: {
-    availableTagsLoaded: (state, action: PayloadAction<Tags[]>) => {
-      return {
-        ...state,
-        availableTags: action.payload,
-      };
-    },
-
     assetLoaded: (state, action: PayloadAction<Asset>) => {
-      return {
-        ...state,
-        asset: action.payload,
-      };
+      return { ...state, ...action.payload };
     },
 
     subgroupAdded: (state, action: PayloadAction<Subgroup>) => {
       return {
         ...state,
-        asset: {
-          ...state.asset,
-          subgroups: [...(state.asset.subgroups || []), action.payload],
-        },
+        subgroups: [...(state.subgroups || []), action.payload],
       };
     },
 
@@ -51,14 +25,11 @@ export const assetSlice = createSlice({
     ) => {
       return {
         ...state,
-        asset: {
-          ...state.asset,
-          subgroups: state.asset.subgroups?.map((subgroup) =>
-            subgroup.subgroup_id === action.payload.id
-              ? { ...subgroup, subgroup_name: action.payload.name }
-              : subgroup
-          ),
-        },
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === action.payload.id
+            ? { ...subgroup, subgroup_name: action.payload.name }
+            : subgroup
+        ),
       };
     },
 
@@ -72,17 +43,14 @@ export const assetSlice = createSlice({
       const { subgroupId, tag } = action.payload;
       return {
         ...state,
-        asset: {
-          ...state.asset,
-          subgroups: state.asset.subgroups?.map((subgroup) =>
-            subgroup.subgroup_id === subgroupId
-              ? {
-                  ...subgroup,
-                  subgroup_tags: [...(subgroup.subgroup_tags || []), tag],
-                }
-              : subgroup
-          ),
-        },
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === subgroupId
+            ? {
+                ...subgroup,
+                subgroup_tags: [...(subgroup.subgroup_tags || []), tag],
+              }
+            : subgroup
+        ),
       };
     },
 
@@ -91,17 +59,20 @@ export const assetSlice = createSlice({
       return {
         ...state,
         selectedSubgroupId: action.payload,
+        // Reset selected tag when changing subgroups
         selectedSubgroupTagId: null,
       };
     },
 
-    selectSubgroupTag: (state, action: PayloadAction<Subgroup_tag | null>) => {
+    selectSubgroupTag: (state, action: PayloadAction<Subgroup_tag | null>) => { // Update type to Subgroup_tag
       return {
         ...state,
         selectedSubgroupTagId: action.payload,
       };
     },
-    subgroupTagsUpdated: (
+
+    // Add a reducer to update tags for a subgroup
+    updateSubgroupTags: (
       state,
       action: PayloadAction<{
         subgroupId: number;
@@ -111,14 +82,11 @@ export const assetSlice = createSlice({
       const { subgroupId, tags } = action.payload;
       return {
         ...state,
-        asset: {
-          ...state.asset,
-          subgroups: state.asset.subgroups?.map((subgroup) =>
-            subgroup.subgroup_id === subgroupId
-              ? { ...subgroup, subgroup_tags: tags }
-              : subgroup
-          ),
-        },
+        subgroups: state.subgroups?.map((subgroup) =>
+          subgroup.subgroup_id === subgroupId
+            ? { ...subgroup, subgroup_tags: tags }
+            : subgroup
+        ),
       };
     },
   },

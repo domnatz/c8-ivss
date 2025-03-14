@@ -1,6 +1,5 @@
 import { Asset } from "../../models/asset";
 import { Masterlist } from "../../models/masterlist";
-import { AssetState } from "../assets/[id]/_redux/asset-state";
 
 export interface RootState {
   menuOpen: boolean;
