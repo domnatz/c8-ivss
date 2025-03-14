@@ -14,12 +14,16 @@ import { filterOptions } from "@/_services/asset-service";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { rootActions } from "@/app/_redux/root-slice";
 
-export function FilterAssets() {
+interface FilterAssetsProps {
+  className?: string;
+}
+
+export function FilterAssets({ className }: FilterAssetsProps) {
   const dispatch = useAppDispatch();
   const state = useAppSelector((state) => state.rootState);
 
   return (
-    <div className={`flex flex-row w-full gap-2 `}>
+    <div className={`flex flex-row w-full gap-2 ${className || ""}`}>
       <SearchForm
         className="w-full h-full"
         value={state.searchQuery}

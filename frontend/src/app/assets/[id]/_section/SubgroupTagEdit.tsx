@@ -3,12 +3,19 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SearchForm } from "@/components/user/search-form";
 import {
   AdjustmentsVerticalIcon,
   PlusCircleIcon,
-  XCircleIcon,
+  TagIcon,
+  XCircleIcon
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -22,18 +29,20 @@ import {
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
+import TemplateSelector from "@/app/assets/[id]/_section/_section/TemplateSelector";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
-import TemplateSelector from "./TemplateSelector";
+
+interface SubgroupTagEditProps {
+  selectedSubgroupTag: Subgroup_tag | null; // Update prop type
+}
 
 export default function SubgroupTagEdit({
   selectedSubgroupTag,
-  assetId,
-}: {
-  selectedSubgroupTag: Subgroup_tag | null;
-  assetId: number;
-}) {
+}: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const state = useAppSelector((state) => state.assetState);
+  const selectedSubgroupTagId = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTagId
+  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
     "newest"
   );
@@ -44,7 +53,7 @@ export default function SubgroupTagEdit({
 
   // Add this function to handle tag deselection
   const handleDeselectTag = () => {
-    dispatch({ type: "assetSlice/selectSubgroupTag", payload: null });
+    dispatch({ type: 'assetSlice/selectSubgroupTag', payload: null });
   };
 
   return (
@@ -52,14 +61,13 @@ export default function SubgroupTagEdit({
       <div className="flex flex-col justify-between items-start gap-1">
         <h2 className="text-lg font-semibold">Tag Editor</h2>
         {/* Display selected subgroup tag name */}
-        {state.selectedSubgroupTagId && (
-          <span className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full ">
+        {selectedSubgroupTagId && (
+          <span 
+            className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full "
+            >
             {/* <TagIcon className="w-4 h-4" /> */}
-            {state.selectedSubgroupTagId.subgroup_tag_name}
-            <XCircleIcon
-              className="w-4 h-4 cursor-pointer hover:text-blue-800"
-              onClick={handleDeselectTag}
-            />
+            {selectedSubgroupTagId.subgroup_tag_name}
+            <XCircleIcon className="w-4 h-4 cursor-pointer hover:text-blue-800" onClick={handleDeselectTag} />
           </span>
         )}
       </div>
@@ -89,6 +97,7 @@ export default function SubgroupTagEdit({
           </DropdownMenuContent>
         </DropdownMenu>
 
+
         <Button
           variant="default"
           size="sm"
@@ -101,11 +110,11 @@ export default function SubgroupTagEdit({
       </div>
 
       <TemplateSelector />
-
+      
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
-        {state.selectedSubgroupTagId ? (
-          <Input placeholder="Make a formula..." className="bg-background" />
+        {selectedSubgroupTagId ? (
+          <Input placeholder="Make a formula..." className="bg-background"/>
         ) : (
           <span className="text-md justify-center flex flex-row text-center text-muted-foreground h-full items-center">
             Select a subgroup tag first
