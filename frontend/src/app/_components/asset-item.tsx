@@ -22,24 +22,21 @@ import { rootActions } from "@/app/_redux/root-slice";
 import { Asset } from "@/models/asset";
 import { SubgroupList } from "./subgroup-list";
 
-interface AssetItemProps {
-  asset: Asset;
-  onAssetChange: () => void;
-  isOpen: boolean;
-  onToggle: (assetId: number) => void;
-}
-
 export function AssetItem({
   asset,
   onAssetChange,
   isOpen,
   onToggle,
-}: AssetItemProps) {
+}: {
+  asset: Asset;
+  onAssetChange: () => void;
+  isOpen: boolean;
+  onToggle: (assetId: number) => void;
+}) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [isPending, startTransition] = useTransition();
   const state = useAppSelector((state) => state.rootState);
-  const { editingAssetId, editingValues } = state;
 
   const handleAssetInputChange = (value: string) => {
     dispatch(
@@ -49,7 +46,7 @@ export function AssetItem({
       })
     );
 
-    if (editingAssetId !== asset.asset_id) {
+    if (state.editingAssetId !== asset.asset_id) {
       dispatch(rootActions.editingAssetIdSet(asset.asset_id));
     }
   };
@@ -61,7 +58,7 @@ export function AssetItem({
     }
 
     const key = `asset-${asset.asset_id}`;
-    const newName = editingValues[key];
+    const newName = state.editingValues[key];
 
     if (newName) {
       startTransition(async () => {
@@ -88,15 +85,12 @@ export function AssetItem({
 
   // Get the current value - either from editing state or asset name
   const inputValue =
-    editingAssetId === asset.asset_id &&
-    editingValues[`asset-${asset.asset_id}`] !== undefined
-      ? editingValues[`asset-${asset.asset_id}`]
+    state.editingAssetId === asset.asset_id &&
+    state.editingValues[`asset-${asset.asset_id}`] !== undefined
+      ? state.editingValues[`asset-${asset.asset_id}`]
       : asset.asset_name;
 
   // Define active asset styles
-  const activeAssetClass = isOpen
-    ? "bg-orange-50 text-[#FF5B1A] font-medium"
-    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
 
   return (
     <Collapsible
@@ -111,10 +105,14 @@ export function AssetItem({
         >
           <div>
             <CollapsibleTrigger
-              className={`flex w-full items-center justify-between px-2 py-1 rounded-md ${activeAssetClass}`}
+              className={`flex w-full items-center justify-between px-2 py-1 rounded-md ${
+                isOpen
+                  ? "bg-orange-50 text-[#FF5B1A] font-medium"
+                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
               onClick={() => {
                 // Only navigate if not in edit mode
-                if (editingAssetId !== asset.asset_id) {
+                if (state.editingAssetId !== asset.asset_id) {
                   router.push(`/assets/${asset.asset_id}`);
                 }
               }}
@@ -135,7 +133,7 @@ export function AssetItem({
                       }
                     }}
                     onFocus={() => {
-                      if (!editingValues[`asset-${asset.asset_id}`]) {
+                      if (!state.editingValues[`asset-${asset.asset_id}`]) {
                         dispatch(
                           rootActions.editingValueChanged({
                             key: `asset-${asset.asset_id}`,
@@ -150,7 +148,7 @@ export function AssetItem({
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   />
-                  {editingAssetId === asset.asset_id && (
+                  {state.editingAssetId === asset.asset_id && (
                     <div
                       role="button"
                       className="ml-1 p-1 h-auto inline-flex items-center justify-center text-sm font-medium hover:bg-accent/50 hover:text-accent-foreground rounded-sm"

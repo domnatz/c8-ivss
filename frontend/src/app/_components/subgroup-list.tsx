@@ -19,21 +19,18 @@ import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { rootActions } from "@/app/_redux/root-slice";
 import { Subgroup } from "@/models/subgroup";
 
-interface SubgroupListProps {
-  assetId: number;
-  subgroups: Subgroup[];
-  onSubgroupChange: () => void;
-}
-
 export function SubgroupList({
   assetId,
   subgroups,
   onSubgroupChange,
-}: SubgroupListProps) {
+}: {
+  assetId: number;
+  subgroups: Subgroup[];
+  onSubgroupChange: () => void;
+}) {
   const [isPending, startTransition] = useTransition();
   const dispatch = useAppDispatch();
   const state = useAppSelector((state) => state.rootState);
-  const { editingSubgroupId, editingValues } = state;
 
   const handleAddSubgroup = () => {
     startTransition(async () => {
@@ -60,7 +57,7 @@ export function SubgroupList({
       })
     );
 
-    if (editingSubgroupId !== `${assetId}-${subgroupId}`) {
+    if (state.editingSubgroupId !== `${assetId}-${subgroupId}`) {
       dispatch(rootActions.editingSubgroupIdSet(`${assetId}-${subgroupId}`));
     }
   };
@@ -75,7 +72,7 @@ export function SubgroupList({
     }
 
     const key = `subgroup-${assetId}-${subgroupId}`;
-    const newName = editingValues[key];
+    const newName = state.editingValues[key];
 
     if (newName) {
       startTransition(async () => {
@@ -118,10 +115,11 @@ export function SubgroupList({
       {Array.isArray(subgroups) &&
         subgroups.map((subgroup) => {
           const subgroupKey = `${assetId}-${subgroup.subgroup_id}`;
-          const isEditing = editingSubgroupId === subgroupKey;
+          const isEditing = state.editingSubgroupId === subgroupKey;
           const inputValue =
-            isEditing && editingValues[`subgroup-${subgroupKey}`] !== undefined
-              ? editingValues[`subgroup-${subgroupKey}`]
+            isEditing &&
+            state.editingValues[`subgroup-${subgroupKey}`] !== undefined
+              ? state.editingValues[`subgroup-${subgroupKey}`]
               : subgroup.subgroup_name;
 
           return (
@@ -146,7 +144,7 @@ export function SubgroupList({
                         }
                       }}
                       onFocus={() => {
-                        if (!editingValues[`subgroup-${subgroupKey}`]) {
+                        if (!state.editingValues[`subgroup-${subgroupKey}`]) {
                           dispatch(
                             rootActions.editingValueChanged({
                               key: `subgroup-${subgroupKey}`,
