@@ -16,7 +16,6 @@ async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
 
-# Create FastAPI app and initialize database on startup
 app = FastAPI(on_startup=[init_models])
 
 # CORS configuration
@@ -37,19 +36,16 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-# Root endpoint
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the FastAPI Backend!"}
 
-# Endpoint to get all assets
 @app.get("/api/assets")
 async def get_assets(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets))
     assets = result.scalars().all()
     return assets
 
-# Endpoint to get a specific asset by ID
 @app.get("/api/assets/{asset_id}")
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching asset with asset_id: {asset_id}")
@@ -63,7 +59,6 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
         "asset_type": asset.asset_type,
     }
 
-# Endpoint to get subgroups of a specific asset
 @app.get("/api/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
@@ -72,7 +67,6 @@ async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
     return subgroups
 
-# Endpoint to get a specific subgroup by ID
 @app.get("/api/subgroups/{subgroup_id}")
 async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching subgroup for subgroup_id: {subgroup_id}")
@@ -84,12 +78,10 @@ async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Found subgroup: {subgroup}")
     return subgroup
 
-# Pydantic model for creating an asset
 class AssetCreate(BaseModel):
     asset_name: str
     asset_type: str
 
-# Endpoint to create a new asset
 @app.post("/api/assets")
 async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
     new_asset = models.Assets(asset_name=asset.asset_name, asset_type=asset.asset_type)
@@ -98,11 +90,9 @@ async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(new_asset)
     return new_asset
 
-# Pydantic model for renaming an asset
 class AssetRename(BaseModel):
     asset_name: str
 
-# Endpoint to rename an existing asset
 @app.put("/api/assets/{asset_id}")
 async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
@@ -115,11 +105,9 @@ async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Dep
     await db.refresh(existing_asset)
     return existing_asset
 
-# Pydantic model for creating a subgroup
 class SubgroupCreate(BaseModel):
     subgroup_name: str
 
-# Endpoint to create a new subgroup for a specific asset
 @app.post("/api/assets/{asset_id}/subgroups")
 async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
@@ -136,11 +124,9 @@ async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSess
     await db.refresh(new_subgroup)
     return new_subgroup
 
-# Pydantic model for renaming a subgroup
 class SubgroupRename(BaseModel):
     subgroup_name: str
 
-# Endpoint to rename an existing subgroup
 @app.put("/api/subgroups/{subgroup_id}")
 async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
@@ -153,11 +139,9 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
     await db.refresh(existing_subgroup)
     return existing_subgroup
 
-# Pydantic model for a tag
 class Tag(BaseModel):
     tag_name: str
 
-# Endpoint to upload a masterlist file and process its content
 @app.post("/api/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
@@ -225,7 +209,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         print(f"Error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     
-# Endpoint to get tags by file ID
+
 @app.get("/api/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Tags).where(models.Tags.file_id == file_id))
@@ -234,7 +218,6 @@ async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tags not found for the given file ID")
     return tags
 
-# Endpoint to get the latest masterlist
 @app.get("/api/masterlist/latest")
 async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).order_by(models.MasterList.file_id.desc()).limit(1))
@@ -243,7 +226,7 @@ async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No masterlist found")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
-# Endpoint to get a masterlist by file ID
+
 @app.get("/api/masterlist/{file_id}")
 async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
@@ -252,12 +235,10 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
         raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
-# Pydantic model for creating a subgroup tag
 class SubgroupTagCreate(BaseModel):
     tag_id: int
     tag_name: str
 
-# Endpoint to add a tag to a subgroup
 @app.post("/api/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
@@ -281,7 +262,6 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
         print(f"Error adding tag to subgroup: {e}")
         return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
     
-# Endpoint to get tags of a specific subgroup
 @app.get("/api/subgroups/{subgroup_id}/tags")
 async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
@@ -290,7 +270,6 @@ async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
     return tags
 
-# Endpoint to get all masterlists
 @app.get("/api/masterlists")
 async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList))

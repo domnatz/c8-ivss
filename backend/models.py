@@ -39,12 +39,9 @@ class SubgroupTag(Base):
     subgroup_tag_id = Column(Integer, primary_key=True, index=True)
     tag_id = Column(Integer, ForeignKey("tags.tag_id", ondelete="CASCADE"))
     subgroup_id = Column(Integer, ForeignKey("subgroups.subgroup_id", ondelete="CASCADE"))
-    parent_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="CASCADE"), nullable=True)
-    subgroup_tag_name = Column(String, nullable=False)
-    
     subgroup = relationship("Subgroups", back_populates="subgroup_tags")
+    subgroup_tag_name = Column(String, nullable=False)  
     tag = relationship("Tags", back_populates="subgroup_tags")
-    parent_tag = relationship("SubgroupTag", remote_side=[subgroup_tag_id], backref="child_tags")
 
 class Templates(Base):
     __tablename__ = "templates"
