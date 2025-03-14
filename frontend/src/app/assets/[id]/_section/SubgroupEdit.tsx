@@ -148,6 +148,7 @@ export default function SubgroupEdit({
           tag_id: tag.tag_id,
           subgroup_id: selectedSubgroup.subgroup_id,
           subgroup_tag_name: tag.tag_name,
+          parent_subgroup_tag_id: null,
         };
 
         // Add it locally

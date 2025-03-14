@@ -238,6 +238,7 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
 class SubgroupTagCreate(BaseModel):
     tag_id: int
     tag_name: str
+    parent_subgroup_tag_id: int = None  # Add this field
 
 @app.post("/api/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
@@ -251,7 +252,8 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
         new_subgroup_tag = models.SubgroupTag(
             subgroup_id=subgroup_id,
             tag_id=tag.tag_id,
-            subgroup_tag_name=tag.tag_name  # Ensure this field is set
+            subgroup_tag_name=tag.tag_name,
+            parent_subgroup_tag_id=tag.parent_subgroup_tag_id  # Ensure this field is set
         )
         db.add(new_subgroup_tag)
         await db.commit()
@@ -277,3 +279,5 @@ async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
     if not masterlists:
         raise HTTPException(status_code=404, detail="No masterlists found")
     return masterlists
+
+

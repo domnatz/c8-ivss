@@ -29,8 +29,9 @@ import {
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import TemplateSelector from "@/app/assets/[id]/_section/_section/TemplateSelector";
+import TemplateSelector from "@/app/assets/[id]/_section/_components/template-selection";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
+import AddSubgroupTagButton from "./_components/add-subgroup-tag-button";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
@@ -82,7 +83,7 @@ export default function SubgroupTagEdit({
 
         <DropdownMenu>
           <DropdownMenuTrigger className="px-2 py-1 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
-            <AdjustmentsVerticalIcon className="w-4 h-4 text-fo gap-2reground" />
+            <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
             Sort
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -96,21 +97,10 @@ export default function SubgroupTagEdit({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-
-        <Button
-          variant="default"
-          size="sm"
-          // onClick={handleAddSubgroup}
-          disabled={loading}
-        >
-          <PlusCircleIcon className="w-4 h-4 mr-1" />
-          Add Subgroup Tag
-        </Button>
       </div>
-
-      <TemplateSelector />
       
+      <TemplateSelector />
+      <AddSubgroupTagButton />
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTagId ? (
@@ -120,6 +110,14 @@ export default function SubgroupTagEdit({
             Select a subgroup tag first
           </span>
         )}
+
+        {/*
+        Map subgroup tags here
+        
+        <div className="flex flex-col gap-2">
+          {subgroupTags.map((tag) => (
+            <SubgroupTagItem key={tag.subgroup_tag_id} tag={tag} />
+          ))*/}
       </div>
     </div>
   );

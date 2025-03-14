@@ -3,4 +3,5 @@ export interface Subgroup_tag {
   tag_id: number; // Foreign key from tag table
   subgroup_id: number; // Foreign key from subgroup table
   subgroup_tag_name: string; // Name of the tag in the subgroup
+  parent_subgroup_tag_id: number | null; // Parent tag ID if this is a child tag
 };

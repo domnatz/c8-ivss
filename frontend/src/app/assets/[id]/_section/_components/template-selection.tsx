@@ -18,7 +18,7 @@ export default function TemplateSelector() {
             <SelectItem value="system">System</SelectItem>
           </SelectContent>
         </Select>
-
+        {/* Add Dialog component */}
         <Dialog>
           <DialogTrigger className="border rounded-md px-2 hover:text-blue-600">
             <ChevronUpDownIcon className="h-5 w-5" />
@@ -34,6 +34,7 @@ export default function TemplateSelector() {
           </DialogContent>
         </Dialog>
       </div>
+      {/* Add Toggle component */}
       <Toggle variant="outline" className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 data-[state=on]:border-blue-200">
         <BookmarkIcon className="h-5 w-5" />
         Save Template
