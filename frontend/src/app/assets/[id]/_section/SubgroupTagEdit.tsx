@@ -60,7 +60,10 @@ export default function SubgroupTagEdit({
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start gap-1">
-        <h2 className="text-lg font-semibold">Tag Editor</h2>
+        <div className="flex flex-row justify-between w-full">
+          <h2 className="text-lg font-semibold">Tag Editor</h2>
+          <AddSubgroupTagButton />
+        </div>
         {/* Display selected subgroup tag name */}
         {selectedSubgroupTagId && (
           <span 
@@ -97,10 +100,15 @@ export default function SubgroupTagEdit({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        
       </div>
-      
+
+
+      <div className="w-full ">
       <TemplateSelector />
-      {/* <AddSubgroupTagButton /> */}
+      </div>
+
+    
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTagId ? (

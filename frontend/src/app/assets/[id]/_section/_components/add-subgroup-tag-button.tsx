@@ -5,22 +5,22 @@ import { PlusCircleIcon } from '@heroicons/react/24/outline';
 
 interface AddSubgroupTagButtonProps {
     className?: string;
-    buttonText?: string;
+    buttonText?: "Add Subgroup Tag";
 }
 
-export default function AddSubgroupTagButton( { className }: AddSubgroupTagButtonProps ) {
+export default function AddSubgroupTagButton( { className, buttonText = "Add Subgroup Tag"}: AddSubgroupTagButtonProps ) {
     return (
-        <div className=''>
+        <div>
         <Dialog>
-          <DialogTrigger className="border bg-orange-500 text-white px-4 py-1 w-full flex flex-row rounded-md items-center gap-2">
+          <DialogTrigger className="border bg-foreground text-background px-4 py-1 w-full flex flex-row rounded-md items-center gap-2">
             <PlusCircleIcon className="h-5 w-5" />
+            {buttonText}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Are you absolutely sure?</DialogTitle>
+              <DialogTitle>Subgroup Tags</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. This will permanently delete your account
-                and remove your data from our servers.
+                Select a Subgroup first then add a tag
               </DialogDescription>
             </DialogHeader>
           </DialogContent>

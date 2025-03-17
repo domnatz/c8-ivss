@@ -7,9 +7,8 @@ import { ChevronUpDownIcon, BookmarkIcon } from "@heroicons/react/24/outline";
 export default function TemplateSelector() {
   return (
     <div className="flex flex-row justify-between w-full gap-2">
-      <div className="flex flex-row gap-2">
         <Select>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select Template" />
           </SelectTrigger>
           <SelectContent>
@@ -33,7 +32,7 @@ export default function TemplateSelector() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-      </div>
+
       {/* Add Toggle component */}
       <Toggle variant="outline" className="data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 data-[state=on]:border-blue-200">
         <BookmarkIcon className="h-5 w-5" />
