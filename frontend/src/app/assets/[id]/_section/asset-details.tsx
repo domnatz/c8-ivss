@@ -1,31 +1,29 @@
 "use client";
 
-import { Asset } from "@/models/asset";
 import { CubeIcon } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import SubgroupEdit from "./SubgroupEdit";
 import SubgroupTagEdit from "./SubgroupTagEdit";
 import { getAssetById } from "@/_services/asset-service";
-import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag
-import { useAppSelector, useAppDispatch } from "@/hooks/hooks"; // Import hooks
-import { assetAction } from "@/app/assets/[id]/_redux/asset-slice"; // Import actions
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
+import { assetAction } from "@/app/assets/[id]/_redux/asset-slice";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AssetDetails() {
   const params = useParams();
+  const dispatch = useAppDispatch();
 
   // Get the raw param value for debugging
   const rawId = params.id;
   // Make sure we're using the correct parameter name and properly convert to number
   const numericAssetId = typeof rawId === "string" ? parseInt(rawId, 10) : NaN;
 
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const selectedSubgroupTag: Subgroup_tag | null = useAppSelector(
-    (state) => state.assetState.selectedSubgroupTagId
-  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
-  const dispatch = useAppDispatch(); // Add this line to use dispatch
+  // Get state from Redux instead of local state
+  const selectedAsset = useAppSelector((state) => state.assetState.selectedAsset);
+  const loading = useAppSelector((state) => state.assetState.loading);
+  const error = useAppSelector((state) => state.assetState.error);
+  const selectedSubgroupTag = useAppSelector((state) => state.assetState.selectedSubgroupTag);
 
   useEffect(() => {
     // Log the raw and parsed values for debugging
@@ -33,32 +31,35 @@ export default function AssetDetails() {
     console.log("Parsed numeric asset ID:", numericAssetId);
 
     if (!numericAssetId || isNaN(numericAssetId)) {
-      setError(`Invalid asset ID: ${rawId}`);
-      setLoading(false);
+      dispatch(assetAction.setError(`Invalid asset ID: ${rawId}`));
+      dispatch(assetAction.setLoading(false));
       return;
     }
 
     const fetchAssetDetails = async () => {
       try {
-        setLoading(true);
+        dispatch(assetAction.setLoading(true));
         const asset = await getAssetById(numericAssetId);
-        setSelectedAsset(asset);
-        setError(null);
+        dispatch(assetAction.setSelectedAsset(asset));
+        dispatch(assetAction.setError(null));
       } catch (err: any) {
         console.error("Error fetching asset details:", err);
         // Provide more detailed error message
-        setError(err?.message || "Failed to load asset details");
-        setSelectedAsset(null);
+        dispatch(assetAction.setError(err?.message || "Failed to load asset details"));
+        dispatch(assetAction.setSelectedAsset(null));
       } finally {
-        setLoading(false);
+        dispatch(assetAction.setLoading(false));
       }
     };
 
     fetchAssetDetails();
-  }, [rawId, numericAssetId]);
+  }, [rawId, numericAssetId, dispatch]);
 
   if (loading) {
-    return <div>Loading asset details...</div>;
+    return <div className="flex flex-row gap-4 w-full h-full py-4">
+      <Skeleton className="w-full "/>
+      <Skeleton className="w-full " />
+    </div>;
   }
 
   if (error || !selectedAsset) {
@@ -77,13 +78,8 @@ export default function AssetDetails() {
   return (
     <div className="py-4 w-full h-full">
       <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
-        <SubgroupEdit
-          selectedAsset={selectedAsset}
-          onSelectSubgroupTag={(tag) => dispatch(assetAction.selectSubgroupTag(tag))} // Use dispatch to select tag
-          onDeselectSubgroupTag={() => dispatch(assetAction.selectSubgroupTag(null))} // Use dispatch to deselect tag
-        />
-        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag}  />{" "}
-        {/* Pass the selected subgroup tag */}
+        <SubgroupEdit />
+        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />
       </div>
     </div>
   );

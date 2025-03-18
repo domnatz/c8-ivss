@@ -70,7 +70,7 @@ export default function SubgroupTagEdit({
             className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full "
             >
             {/* <TagIcon className="w-4 h-4" /> */}
-            {selectedSubgroupTagId.subgroup_tag_name}
+            {selectedSubgroupTag?.subgroup_tag_name}
             <XCircleIcon className="w-4 h-4 cursor-pointer hover:text-blue-800" onClick={handleDeselectTag} />
           </span>
         )}

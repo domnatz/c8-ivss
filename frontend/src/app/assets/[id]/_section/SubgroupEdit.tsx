@@ -23,59 +23,63 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TagDetails } from "./tagsDetails";
-import { Asset } from "@/models/asset";
+import { useEffect } from "react";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { getAssetById } from "@/_services/asset-service";
-import { fetchTagsBySubgroupId } from "@/_services/subgroup-service"; // Import fetchTagsBySubgroupId
+import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
-import { createSubgroup } from "@/_actions/asset-actions";
-import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
-import { useAppSelector } from "@/hooks/hooks"; 
-import { RootState } from "@/store"; // Import RootState
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks"; 
+import { RootState } from "@/store";
+import { assetAction } from "../_redux/asset-slice";
+import { addSubgroupAction, addTagToSubgroupAction } from "@/_actions/subgroup-actions";
 
-interface SubgroupEditProps {
-  selectedAsset: Asset | null;
-  onSelectSubgroupTag: (tag: Subgroup_tag | null) => void; // Add prop for selecting subgroup tag
-  onDeselectSubgroupTag: () => void; // Add prop for deselecting subgroup tag
-}
-
-export default function SubgroupEdit({
-  selectedAsset,
-  onSelectSubgroupTag,
-  onDeselectSubgroupTag,
-}: SubgroupEditProps) {
+export default function SubgroupEdit() {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId); // Get selected masterlist ID from Redux state
-  const [selectedSubgroup, setSelectedSubgroup] =
-    React.useState<Subgroup | null>(null);
-  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
-    "newest"
-  );
+  const selectedAsset = useAppSelector((state) => state.assetState.selectedAsset);
+  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId);
+  const selectedSubgroupId = useAppSelector((state) => state.assetState.selectedSubgroupId);
+  const selectedTagId = useAppSelector((state) => state.assetState.selectedSubgroupTagId);
+  const dispatch = useAppDispatch();
+  
+  const [selectedSubgroup, setSelectedSubgroup] = React.useState<Subgroup | null>(null);
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
-  const [selectedTagId, setSelectedTagId] = React.useState<number | null>(null); // Add state for selected tag ID
 
   const params = useParams();
-  const assetId = Number(params.id); // Change from params.assetId to params.id
+  const assetId = Number(params.id);
 
   // Select the first subgroup by default when asset changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       selectedAsset &&
       selectedAsset.subgroups &&
       selectedAsset.subgroups.length > 0
     ) {
-      setSelectedSubgroup(selectedAsset.subgroups[0]);
+      const firstSubgroup = selectedAsset.subgroups[0];
+      setSelectedSubgroup(firstSubgroup);
+      dispatch(assetAction.selectSubgroup(firstSubgroup.subgroup_id));
     } else {
       setSelectedSubgroup(null);
+      dispatch(assetAction.selectSubgroup(null));
     }
-  }, [selectedAsset]);
+  }, [selectedAsset, dispatch]);
+
+  // Update selected subgroup when selectedSubgroupId changes
+  useEffect(() => {
+    if (selectedSubgroupId && selectedAsset?.subgroups) {
+      const subgroup = selectedAsset.subgroups.find(
+        (sub) => sub.subgroup_id === selectedSubgroupId
+      );
+      setSelectedSubgroup(subgroup || null);
+    }
+  }, [selectedSubgroupId, selectedAsset]);
 
   // Fetch tags when selected subgroup changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedSubgroup) {
       console.log("Selected Subgroup:", selectedSubgroup);
       fetchTagsBySubgroupId(selectedSubgroup.subgroup_id)
@@ -84,8 +88,8 @@ export default function SubgroupEdit({
         })
         .catch((error) => {
           console.error("Error fetching tags:", error);
-          setSubgroupTags([]); // Clear tags on error
-          toast.error("Failed to fetch tags for the selected subgroup"); // Display error message
+          setSubgroupTags([]);
+          toast.error("Failed to fetch tags for the selected subgroup");
         });
     } else {
       setSubgroupTags([]);
@@ -107,13 +111,9 @@ export default function SubgroupEdit({
 
     try {
       setLoading(true);
-      const result = await createSubgroup(assetId);
+      const result = await addSubgroupAction(assetId);
       if (result.success) {
         toast.success("New subgroup was added successfully");
-
-        // Refresh asset data
-        const updatedAsset = await getAssetById(assetId);
-
         toast.info("Refresh the page to see the new subgroup");
       } else {
         toast.error(
@@ -134,26 +134,16 @@ export default function SubgroupEdit({
     try {
       setLoading(true);
 
-      // Call the API to add the tag to the subgroup
+      // Call the action to add the tag to the subgroup
       const result = await addTagToSubgroupAction(
         selectedSubgroup.subgroup_id,
         tag.tag_id,
         tag.tag_name
       );
 
-      if (result.success) {
-        // Create a new tag object
-        const newTag: Subgroup_tag = {
-          subgroup_tag_id: result.data.subgroup_tag_id,
-          tag_id: tag.tag_id,
-          subgroup_id: selectedSubgroup.subgroup_id,
-          subgroup_tag_name: tag.tag_name,
-          parent_subgroup_tag_id: null,
-        };
-
-        // Add it locally
-        setSubgroupTags((prev) => [...prev, newTag]);
-
+      if (result.success && result.data) {
+        // Add the new tag locally
+        setSubgroupTags((prev) => [...prev, result.data as Subgroup_tag]);
         toast.success(
           `Added "${tag.tag_name}" to ${selectedSubgroup.subgroup_name}`
         );
@@ -169,22 +159,21 @@ export default function SubgroupEdit({
   };
 
   const handleTagClick = (tag: Subgroup_tag) => {
-    setSelectedTagId(tag.subgroup_tag_id); // Set the selected tag ID
-    onSelectSubgroupTag(tag); // Call the function to set the selected subgroup tag
+    // Use Redux to select or deselect tag
+    if (selectedTagId === tag.subgroup_tag_id) {
+      dispatch(assetAction.selectSubgroupTag(null));
+    } else {
+      dispatch(assetAction.selectSubgroupTag(tag));
+    }
   };
 
-  const handleTagDeselect = () => {
-    setSelectedTagId(null); // Deselect the tag
-    onDeselectSubgroupTag(); // Call the function to deselect the subgroup tag
-  };
-
-  if (!selectedAsset) {
-    return (
-      <div className="w-full flex items-center justify-center">
-        Loading asset details...
-      </div>
+  const handleSubgroupChange = (value: string) => {
+    const subgroup = selectedAsset?.subgroups?.find(
+      (sub) => sub.subgroup_id === Number(value)
     );
-  }
+    setSelectedSubgroup(subgroup ?? null);
+    dispatch(assetAction.selectSubgroup(Number(value)));
+  };
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
@@ -230,12 +219,7 @@ export default function SubgroupEdit({
       <div className="flex flex-row w-full gap-2">
         <Select
           value={selectedSubgroup?.subgroup_id.toString()}
-          onValueChange={(value: string) => {
-            const subgroup = selectedAsset?.subgroups?.find(
-              (sub) => sub.subgroup_id === Number(value)
-            );
-            setSelectedSubgroup(subgroup ?? null);
-          }}
+          onValueChange={handleSubgroupChange}
         >
           <SelectTrigger className="w-full shadow-none">
             <SelectValue placeholder="Select a subgroup" />
@@ -254,7 +238,7 @@ export default function SubgroupEdit({
         <TagDetails
           onAddTag={handleAddTag}
           subgroupId={selectedSubgroup?.subgroup_id}
-          masterlistId={masterlistId} // Pass masterlistId prop
+          masterlistId={masterlistId}
         />
       </div>
 
@@ -271,12 +255,8 @@ export default function SubgroupEdit({
                       tag.subgroup_tag_id === selectedTagId
                         ? "bg-orange-50 text-orange-600"
                         : ""
-                    }`} // Highlight selected tag
-                    onClick={() =>
-                      tag.subgroup_tag_id === selectedTagId
-                        ? handleTagDeselect() // Deselect if already selected
-                        : handleTagClick(tag)
-                    } // Add onClick handler
+                    }`}
+                    onClick={() => handleTagClick(tag)}
                   >
                     {tag.subgroup_tag_name}
                   </Button>
