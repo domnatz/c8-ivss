@@ -22,10 +22,11 @@ import { Subgroup_tag } from "@/models/subgroup-tag";
 import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { toast } from "react-toastify";
 import { SearchForm } from "@/components/user/search-form";
+import { addTagToSubgroup } from "@/_actions/subgroup-tag-actions";
 
 interface AddSubgroupTagButtonProps {
   className?: string;
-  buttonText?: "Add Subgroup Tag";
+  buttonText?: string;
 }
 
 export default function AddSubgroupTagButton({
@@ -35,11 +36,15 @@ export default function AddSubgroupTagButton({
   const selectedAsset = useAppSelector(
     (state) => state.assetState.selectedAsset
   );
+  const selectedSubgroupTag = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTag
+  );
   const [selectedSubgroupId, setSelectedSubgroupId] =
     React.useState<string>("");
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const handleSubgroupChange = (value: string) => {
     setSelectedSubgroupId(value);
@@ -71,10 +76,45 @@ export default function AddSubgroupTagButton({
     tag.subgroup_tag_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Handle adding a tag to the selected parent subgroup tag
+  const handleAddTagToSubgroupTag = async (tag: Subgroup_tag) => {
+    if (!selectedSubgroupId || !selectedSubgroupTag) {
+      toast.error("Please select both a subgroup and a parent subgroup tag");
+      return;
+    }
+
+    try {
+      const result = await addTagToSubgroup(
+        Number(selectedSubgroupId),
+        tag.tag_id,
+        tag.subgroup_tag_name,
+        selectedSubgroupTag.subgroup_tag_id
+      );
+
+      if (result.success) {
+        toast.success(`Added ${tag.subgroup_tag_name} to ${selectedSubgroupTag.subgroup_tag_name}`);
+        setIsOpen(false); // Close the dialog after successful addition
+      } else {
+        toast.error(`Failed to add tag: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error adding tag:", error);
+      toast.error("An error occurred while adding the tag");
+    }
+  };
+
   return (
     <div>
-      <Dialog>
-        <DialogTrigger className="border bg-foreground text-background px-4 py-1 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2">
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger 
+          className={`border px-4 py-1 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2 ${
+            selectedSubgroupTag 
+              ? "bg-foreground text-background cursor-pointer" 
+              : "bg-muted-foreground text-gray-200 opacity-70 cursor-not-allowed"
+          }`}
+          onClick={() => setIsOpen(true)}
+          disabled={!selectedSubgroupTag} 
+        >
           <PlusCircleIcon className="h-5 w-5" />
           {buttonText}
         </DialogTrigger>
@@ -82,7 +122,9 @@ export default function AddSubgroupTagButton({
           <DialogHeader>
             <DialogTitle>Subgroup Tags</DialogTitle>
             <DialogDescription>
-              Select a Subgroup first then add a tag
+              {selectedSubgroupTag 
+                ? `Select tags to add to "${selectedSubgroupTag.subgroup_tag_name}"`
+                : "Select a parent subgroup tag first"}
             </DialogDescription>
           </DialogHeader>
 
@@ -137,6 +179,7 @@ export default function AddSubgroupTagButton({
                         key={tag.subgroup_tag_id}
                         variant="outline"
                         className="flex items-center justify-between gap-2"
+                        onClick={() => handleAddTagToSubgroupTag(tag)}
                       >
                         {tag.subgroup_tag_name}
                         <PlusCircleIcon className="h-4 w-4 ml-1" />

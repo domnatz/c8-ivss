@@ -146,11 +146,7 @@ export default function SubgroupTagEdit({
 
         {/* Map subgroup tags here */}
         <div className="flex flex-col gap-2">
-          {subgroupTags.map((tag) => (
-            <div key={tag.subgroup_tag_id} className="tag-item">
-              {tag.subgroup_tag_name}
-            </div>
-          ))}
+
         </div>
       </div>
     </div>
