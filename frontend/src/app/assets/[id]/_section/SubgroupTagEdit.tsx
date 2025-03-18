@@ -32,6 +32,8 @@ import { toast } from "react-toastify";
 import TemplateSelector from "@/app/assets/[id]/_section/_components/template-selection";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import AddSubgroupTagButton from "./_components/add-subgroup-tag-button";
+import { createFormula } from "@/_actions/formula-actions"; // Import the createFormula function
+import { Formula } from "@/models/formula"; // Import the Formula interface
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null; // Update prop type
@@ -49,12 +51,32 @@ export default function SubgroupTagEdit({
   );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
+  const [formulaInput, setFormulaInput] = React.useState(""); // Add state for formula input
   const params = useParams();
   const dispatch = useAppDispatch(); // Add this line to use dispatch
 
   // Add this function to handle tag deselection
   const handleDeselectTag = () => {
     dispatch({ type: 'assetSlice/selectSubgroupTag', payload: null });
+  };
+
+  // Add this function to handle formula submission
+  const handleFormulaSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newFormula: Formula = {
+        formula_name: "New Formula", // Replace with actual formula name
+        formula_expression: formulaInput,
+        num_parameters: 0, // Replace with actual number of parameters
+      };
+      const result = await createFormula(newFormula);
+      if (result.success) {
+        toast.success("Formula created successfully!");
+        setFormulaInput(""); // Clear the input field
+      } else {
+        toast.error(`Error creating formula: ${result.error}`);
+      }
+    }
   };
 
   return (
@@ -112,20 +134,27 @@ export default function SubgroupTagEdit({
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTagId ? (
-          <Input placeholder="Make a formula..." className="bg-background"/>
+          <Input 
+            placeholder="Make a formula..." 
+            className="bg-background"
+            value={formulaInput}
+            onChange={(e) => setFormulaInput(e.target.value)}
+            onKeyDown={handleFormulaSubmit} // Add event listener for Enter key
+          />
         ) : (
           <span className="text-md justify-center flex flex-row text-center text-muted-foreground h-full items-center">
             Select a subgroup tag first
           </span>
         )}
 
-        {/*
-        Map subgroup tags here
-        
+        {/* Map subgroup tags here */}
         <div className="flex flex-col gap-2">
           {subgroupTags.map((tag) => (
-            <SubgroupTagItem key={tag.subgroup_tag_id} tag={tag} />
-          ))*/}
+            <div key={tag.subgroup_tag_id} className="tag-item">
+              {tag.subgroup_tag_name}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -5,7 +5,8 @@ from sqlalchemy.future import select
 from backend.database import AsyncSessionLocal, engine
 from backend import models
 from pydantic import BaseModel
-from typing import List
+import re
+from typing import List, Dict, Any
 import csv
 from io import StringIO, BytesIO
 from openpyxl import load_workbook
@@ -280,4 +281,92 @@ async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No masterlists found")
     return masterlists
 
+# Pydantic models for formula endpoints
+class FormulaCreate(BaseModel):
+    formula_name: str
+    formula_desc: str = None
+    formula_expression: str
+    num_parameters: int
 
+class FormulaEvaluationRequest(BaseModel):
+    formula_id: int
+    parameters: Dict[str, Any]
+
+@app.get("/api/formulas")
+async def get_formulas(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Formulas))
+    formulas = result.scalars().all()
+    return formulas
+
+@app.get("/api/formulas/{formula_id}")
+async def get_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    formula = result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    return formula
+
+@app.post("/api/formulas")
+async def create_formula(formula: FormulaCreate, db: AsyncSession = Depends(get_db)):
+    new_formula = models.Formulas(
+        formula_name=formula.formula_name,
+        formula_desc=formula.formula_desc,
+        formula_expression=formula.formula_expression,
+        num_parameters=formula.num_parameters
+    )
+    db.add(new_formula)
+    await db.commit()
+    await db.refresh(new_formula)
+    return new_formula
+
+@app.put("/api/formulas/{formula_id}")
+async def update_formula(formula_id: int, formula: FormulaCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    existing_formula = result.scalars().first()
+    if not existing_formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    existing_formula.formula_name = formula.formula_name
+    existing_formula.formula_desc = formula.formula_desc
+    existing_formula.formula_expression = formula.formula_expression
+    existing_formula.num_parameters = formula.num_parameters
+    
+    await db.commit()
+    await db.refresh(existing_formula)
+    return existing_formula
+
+@app.delete("/api/formulas/{formula_id}")
+async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    formula = result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    await db.delete(formula)
+    await db.commit()
+    return {"message": "Formula deleted successfully"}
+
+@app.post("/api/formulas/evaluate")
+async def evaluate_formula(request: FormulaEvaluationRequest, db: AsyncSession = Depends(get_db)):
+    # Get the formula
+    result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == request.formula_id))
+    formula = result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    # Simple evaluation of the formula using the provided parameters
+    try:
+        # Create a safe evaluation environment with only the parameters provided
+        eval_env = {**request.parameters}
+        
+        # Replace variable names in the expression
+        expression = formula.formula_expression
+        
+        # Basic security check to prevent arbitrary code execution
+        if re.search(r'(__|\bimport\b|\beval\b|\bexec\b|\bcompile\b|\bopen\b|\bread\b|\bwrite\b|\bsys\b|\bos\b)', expression):
+            raise ValueError("Potentially unsafe formula expression")
+        
+        result = eval(expression, {"__builtins__": {}}, eval_env)
+        return {"formula_id": formula.formula_id, "parameters": request.parameters, "result": result}
+    except Exception as e:
+        return {"formula_id": formula.formula_id, "parameters": request.parameters, "error": str(e)}
