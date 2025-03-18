@@ -1,9 +1,17 @@
 import { Asset } from "@/models/asset";
-import { Subgroup_tag } from "@/models/subgroup-tag"; // Import Subgroup_tag
+import { Subgroup_tag } from "@/models/subgroup-tag";
 
-export const initialState: Asset & {
+export const initialState: {
+  asset_id: number;
+  asset_type: string;
+  asset_name: string;
+  subgroups: any[];
   selectedSubgroupId: number | null;
-  selectedSubgroupTagId: Subgroup_tag | null; // Update type to Subgroup_tag
+  selectedSubgroupTagId: number | null; // Store just the ID
+  selectedSubgroupTag: Subgroup_tag | null; // Store the full tag object
+  selectedAsset: Asset | null;
+  loading: boolean;
+  error: string | null;
 } = {
   asset_id: 0,
   asset_type: "",
@@ -11,4 +19,8 @@ export const initialState: Asset & {
   subgroups: [],
   selectedSubgroupId: null,
   selectedSubgroupTagId: null,
+  selectedSubgroupTag: null, // Initialize as null
+  selectedAsset: null,
+  loading: false,
+  error: null,
 };

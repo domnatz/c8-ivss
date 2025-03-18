@@ -61,16 +61,39 @@ export const assetSlice = createSlice({
         selectedSubgroupId: action.payload,
         // Reset selected tag when changing subgroups
         selectedSubgroupTagId: null,
+        selectedSubgroupTag: null, // Add this to track the full tag object
       };
     },
 
     selectSubgroupTag: (state, action: PayloadAction<Subgroup_tag | null>) => { // Update type to Subgroup_tag
       return {
         ...state,
-        selectedSubgroupTagId: action.payload,
+        selectedSubgroupTagId: action.payload?.subgroup_tag_id || null,
+        selectedSubgroupTag: action.payload, // Store the full tag object
       };
     },
-
+    
+    setSelectedAsset: (state, action: PayloadAction<Asset | null>) => {
+      return {
+        ...state,
+        selectedAsset: action.payload,
+      };
+    },
+    
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        loading: action.payload,
+      };
+    },
+    
+    setError: (state, action: PayloadAction<string | null>) => {
+      return {
+        ...state,
+        error: action.payload,
+      };
+    },
+    
     // Add a reducer to update tags for a subgroup
     updateSubgroupTags: (
       state,
