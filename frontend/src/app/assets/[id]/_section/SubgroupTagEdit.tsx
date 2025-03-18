@@ -43,9 +43,6 @@ export default function SubgroupTagEdit({
   selectedSubgroupTag,
 }: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const selectedSubgroupTagId = useAppSelector(
-    (state) => state.assetState.selectedSubgroupTagId
-  ); // Use useAppSelector to get selectedSubgroupTagId from the Redux store
   const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
     "newest"
   );
@@ -64,12 +61,14 @@ export default function SubgroupTagEdit({
   const handleFormulaSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      console.log("Submitting formula:", formulaInput); // Add this line
       const newFormula: Formula = {
         formula_name: "New Formula", // Replace with actual formula name
         formula_expression: formulaInput,
         num_parameters: 0, // Replace with actual number of parameters
       };
       const result = await createFormula(newFormula);
+      console.log("Create formula result:", result); // Add this line
       if (result.success) {
         toast.success("Formula created successfully!");
         setFormulaInput(""); // Clear the input field
@@ -87,12 +86,12 @@ export default function SubgroupTagEdit({
           <AddSubgroupTagButton />
         </div>
         {/* Display selected subgroup tag name */}
-        {selectedSubgroupTagId && (
+        {selectedSubgroupTag && (
           <span 
             className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 pl-4 pr-2 py-1 rounded-full "
             >
             {/* <TagIcon className="w-4 h-4" /> */}
-            {selectedSubgroupTag?.subgroup_tag_name}
+            {selectedSubgroupTag.subgroup_tag_name}
             <XCircleIcon className="w-4 h-4 cursor-pointer hover:text-blue-800" onClick={handleDeselectTag} />
           </span>
         )}
@@ -125,15 +124,13 @@ export default function SubgroupTagEdit({
         
       </div>
 
-
       <div className="w-full ">
-      <TemplateSelector />
+        <TemplateSelector />
       </div>
 
-    
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
-        {selectedSubgroupTagId ? (
+        {selectedSubgroupTag ? (
           <Input 
             placeholder="Make a formula..." 
             className="bg-background"
