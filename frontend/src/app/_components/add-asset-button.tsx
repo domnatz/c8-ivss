@@ -26,6 +26,22 @@ export function AddAssetButton({ className, disabled, onAssetAdded }: AddAssetBu
     null
   );
 
+  useEffect(() => {
+    if (state) {
+      console.log("Asset creation state:", state);
+      if (state.success) {
+        toast.success("Asset created successfully!");
+        toast.info("Please refresh the page to see the new asset.");
+        if (onAssetAdded) {
+          onAssetAdded();
+        }
+      } else if (state.error) {
+        toast.error(`Failed to create asset: ${state.error}`);
+        console.error("Asset creation error:", state.error);
+      }
+    }
+  }, [state, onAssetAdded]);
+
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
