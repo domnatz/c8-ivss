@@ -70,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
 
         {/* Add Assets Button Component */}
-        <AddAssetButton />
+        <AddAssetButton onAssetAdded={fetchAssets} />
       </SidebarHeader>
 
       {/* Asset List Component */}

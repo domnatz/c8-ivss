@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useAppSelector } from "@/hooks/hooks";
 import { AssetItem } from "./asset-item";
 import { Asset } from "@/models/asset";
+import { createAsset } from "@/_actions/asset-actions";
+import { toast } from "react-toastify";
 
 export function AssetList({
   className,
@@ -14,6 +16,7 @@ export function AssetList({
   onAssetChange: () => void;
   onAssetSelect?: (asset: Asset) => void;
 }) {
+  const [isPending, startTransition] = useTransition();
   const state = useAppSelector((state) => state.rootState);
   const [openAssetId, setOpenAssetId] = useState<number | null>(null);
   const initialized = useRef(false);
@@ -26,6 +29,22 @@ export function AssetList({
       initialized.current = true;
     }
   }, [state.assets, onAssetSelect]);
+
+  const handleAddAsset = () => {
+    startTransition(async () => {
+      try {
+        const result = await createAsset(null);
+        if (result.success) {
+          toast.success("Asset created successfully");
+          onAssetChange(); // Refresh the asset list
+        } else {
+          toast.error(`Failed to create asset: ${result.error}`);
+        }
+      } catch (error) {
+        toast.error("An error occurred while creating the asset");
+      }
+    });
+  };
 
   const sortAssets = (assets: Asset[], filter: string) => {
     switch (filter) {

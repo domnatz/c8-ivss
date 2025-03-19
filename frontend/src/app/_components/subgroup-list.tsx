@@ -99,8 +99,8 @@ export function SubgroupList({
 
   return (
     <SidebarMenu>
-      <div className="flex items-center font-semibold border-b-1 text-xs px-4 justify-between w-full">
-        <span>Subgroups</span>
+      <div className="flex flex-row px-4 pr-2 items-center font-semibold border-b-1 text-xs justify-between w-full ">
+        <span className="text-md">Subgroups</span>
         <Button
           variant="ghost"
           size="sm"
@@ -123,10 +123,10 @@ export function SubgroupList({
               : subgroup.subgroup_name;
 
           return (
-            <SidebarMenuItem key={subgroup.subgroup_id} >
+            <SidebarMenuItem key={subgroup.subgroup_id}>
               <SidebarMenuButton asChild>
                 <div className="flex items-center justify-start w-full pl-8">
-                  <div className="flex items-center w-fit">
+                  <div className="flex items-center w-fit ">
                     <Input
                       value={inputValue}
                       onChange={(e) => {
@@ -153,7 +153,7 @@ export function SubgroupList({
                         }
                         dispatch(rootActions.editingSubgroupIdSet(subgroupKey));
                       }}
-                      className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium"
+                      className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium "
                       onClick={(e) => e.stopPropagation()}
                     />
                     {isEditing && (

@@ -13,6 +13,7 @@ import {
 import { SearchForm } from "@/components/user/search-form";
 import {
   AdjustmentsVerticalIcon,
+  DocumentCheckIcon,
   PlusCircleIcon,
   TagIcon,
   XCircleIcon,
@@ -188,7 +189,7 @@ export default function SubgroupTagEdit({
                 Loading child tags...
               </div>
             ) : sortedChildTags.length > 0 ? (
-              <div className="flex flex-col gap-2 overflow-y-auto max-h-80">
+              <div className="flex flex-col gap-2 overflow-y-auto max-h-svh">
                 {sortedChildTags.map((tag) => (
                   <div
                     key={tag.subgroup_tag_id}
@@ -213,6 +214,11 @@ export default function SubgroupTagEdit({
           </span>
         )}
       </div>
+
+      <Button variant="outline" className="cursor-pointer">
+        <DocumentCheckIcon /> 
+        <span>Save Changes</span>
+      </Button>
     </div>
   );
 }
