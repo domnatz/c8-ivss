@@ -31,7 +31,6 @@ export function AddAssetButton({ className, disabled, onAssetAdded }: AddAssetBu
       console.log("Asset creation state:", state);
       if (state.success) {
         toast.success("Asset created successfully!");
-        toast.info("Please refresh the page to see the new asset.");
         if (onAssetAdded) {
           onAssetAdded();
         }
