@@ -123,10 +123,9 @@ export function SubgroupList({
               : subgroup.subgroup_name;
 
           return (
-            <SidebarMenuItem key={subgroup.subgroup_id} className="pl-6">
+            <SidebarMenuItem key={subgroup.subgroup_id} >
               <SidebarMenuButton asChild>
-                <div className="flex items-center justify-start w-full">
-                  <ArrowTurnDownRightIcon className="w-5 h-5" />
+                <div className="flex items-center justify-start w-full pl-8">
                   <div className="flex items-center w-fit">
                     <Input
                       value={inputValue}

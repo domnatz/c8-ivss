@@ -160,7 +160,7 @@ export function AssetItem({
                 </div>
               </div>
               <ChevronRight
-                className={`ml-auto w-5 h-5 transition-transform group-data-[state=open]/collapsible:rotate-90 ${
+                className={`ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90 ${
                   isOpen ? "text-[#FF5B1A]" : ""
                 }`}
               />

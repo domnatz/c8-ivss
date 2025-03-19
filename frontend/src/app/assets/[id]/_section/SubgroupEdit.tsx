@@ -31,21 +31,35 @@ import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import { Tags } from "@/models/tags";
-import { useAppSelector, useAppDispatch } from "@/hooks/hooks"; 
+import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import { RootState } from "@/store";
 import { assetAction } from "../_redux/asset-slice";
-import { addSubgroupAction, addTagToSubgroupAction } from "@/_actions/subgroup-actions";
+import {
+  addSubgroupAction,
+  addTagToSubgroupAction,
+} from "@/_actions/subgroup-actions";
 
 export default function SubgroupEdit() {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const selectedAsset = useAppSelector((state) => state.assetState.selectedAsset);
-  const masterlistId = useAppSelector((state: RootState) => state.rootState.selectedMasterlistId);
-  const selectedSubgroupId = useAppSelector((state) => state.assetState.selectedSubgroupId);
-  const selectedTagId = useAppSelector((state) => state.assetState.selectedSubgroupTagId);
+  const selectedAsset = useAppSelector(
+    (state) => state.assetState.selectedAsset
+  );
+  const masterlistId = useAppSelector(
+    (state: RootState) => state.rootState.selectedMasterlistId
+  );
+  const selectedSubgroupId = useAppSelector(
+    (state) => state.assetState.selectedSubgroupId
+  );
+  const selectedTagId = useAppSelector(
+    (state) => state.assetState.selectedSubgroupTagId
+  );
   const dispatch = useAppDispatch();
-  
-  const [selectedSubgroup, setSelectedSubgroup] = React.useState<Subgroup | null>(null);
-  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
+
+  const [selectedSubgroup, setSelectedSubgroup] =
+    React.useState<Subgroup | null>(null);
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
+    "newest"
+  );
   const [loading, setLoading] = React.useState(false);
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
 
@@ -178,7 +192,13 @@ export default function SubgroupEdit() {
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Subgroup Editor</h2>
+        <h2 className="text-lg font-semibold">
+          Subgroup Editor
+          <span className="text-xs font-normal text-zinc-500 flex justify-start text-left w-full">
+            Please select a subgroup to edit
+          </span>
+        </h2>
+
         <Button
           variant="outline"
           size="sm"

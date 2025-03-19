@@ -22,7 +22,7 @@ import { Subgroup_tag } from "@/models/subgroup-tag";
 import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { toast } from "react-toastify";
 import { SearchForm } from "@/components/user/search-form";
-import { addTagToSubgroup } from "@/_actions/subgroup-tag-actions";
+import { addTagToSubgroupTag } from "@/_actions/subgroup-tag-actions";
 
 interface AddSubgroupTagButtonProps {
   className?: string;
@@ -84,7 +84,7 @@ export default function AddSubgroupTagButton({
     }
 
     try {
-      const result = await addTagToSubgroup(
+      const result = await addTagToSubgroupTag(
         Number(selectedSubgroupId),
         tag.tag_id,
         tag.subgroup_tag_name,
@@ -107,7 +107,7 @@ export default function AddSubgroupTagButton({
     <div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger 
-          className={`border px-4 py-1 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2 ${
+          className={`border px-4 py-2 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2 ${
             selectedSubgroupTag 
               ? "bg-foreground text-background cursor-pointer" 
               : "bg-muted-foreground text-gray-200 opacity-70 cursor-not-allowed"

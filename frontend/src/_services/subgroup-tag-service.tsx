@@ -2,7 +2,7 @@ import { Subgroup_tag } from "@/models/subgroup-tag";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function addTagToSubgroup(
+export async function addTagToSubgroupTag(
   subgroupId: number,
   tagId: number,
   tagName: string,
@@ -34,6 +34,17 @@ export async function getSubgroupTags(subgroupId: number): Promise<Subgroup_tag[
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Failed to fetch subgroup tags");
+  }
+
+  return response.json();
+}
+
+export async function getChildTagsByParentId(parentTagId: number): Promise<Subgroup_tag[]> {
+  const response = await fetch(`${API_URL}/api/subgroups/${parentTagId}/children_tags`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch child tags");
   }
 
   return response.json();

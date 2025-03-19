@@ -1,9 +1,9 @@
 "use server";
 
-import { addTagToSubgroup as addTagToSubgroupService } from "@/_services/subgroup-tag-service";
+import { addTagToSubgroupTag as addTagToSubgroupService } from "@/_services/subgroup-tag-service";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 
-export async function addTagToSubgroup(
+export async function addTagToSubgroupTag(
   subgroupId: number,
   tagId: number,
   tagName: string,

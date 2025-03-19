@@ -6,7 +6,7 @@ from backend.database import AsyncSessionLocal, engine
 from backend import models
 from pydantic import BaseModel
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import csv
 from io import StringIO, BytesIO
 from openpyxl import load_workbook
@@ -370,3 +370,20 @@ async def evaluate_formula(request: FormulaEvaluationRequest, db: AsyncSession =
         return {"formula_id": formula.formula_id, "parameters": request.parameters, "result": result}
     except Exception as e:
         return {"formula_id": formula.formula_id, "parameters": request.parameters, "error": str(e)}
+    
+    
+class SubgroupTagResponse(BaseModel):
+    subgroup_tag_id: int
+    subgroup_tag_name: str
+    parent_subgroup_tag_id: Optional[int]
+
+    class Config:
+        orm_mode = True
+        
+@app.get("/api/subgroups/{subgroup_tag_id}/children_tags", response_model=List[SubgroupTagResponse])
+async def get_children_tags(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.parent_subgroup_tag_id == subgroup_tag_id))
+    children_tags = result.scalars().all()
+    if not children_tags:
+        raise HTTPException(status_code=404, detail="Children tags not found for the given subgroup tag ID")
+    return children_tags
