@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { assetAction } from "../../_redux/asset-slice";
+import { toast } from "react-toastify";
 
 interface FormulaSectionProps {
   isDisabled?: boolean;
@@ -29,6 +30,8 @@ export default function FormulaSection({
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
   const [formulaName, setFormulaName] = React.useState("");
   const [formulaExpression, setFormulaExpression] = React.useState("");
+  const [formulaDesc, setFormulaDesc] = React.useState("");
+  const [isCreating, setIsCreating] = React.useState(false);
   const dispatch = useAppDispatch();
   
   // Get state from Redux
@@ -60,14 +63,56 @@ export default function FormulaSection({
     setSelectDialogOpen(false);
   };
 
-  // Placeholder for future formula creation functionality
-  const handleCreateFormula = (e: React.FormEvent) => {
+  // Calculate number of parameters in formula expression
+  const calculateParameterCount = (expression: string): number => {
+    // Find unique variable names in the expression (simple approach)
+    const variableMatches = expression.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+    const uniqueVariables = new Set(variableMatches);
+    // Remove any JavaScript keywords or functions that might have been matched
+    const jsKeywords = ['Math', 'parseInt', 'parseFloat', 'Number', 'String', 'Boolean', 'Array', 'Object'];
+    jsKeywords.forEach(keyword => uniqueVariables.delete(keyword));
+    return uniqueVariables.size;
+  };
+
+  // Handle formula creation
+  const handleCreateFormula = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Create formula:", { name: formulaName, expression: formulaExpression });
-    setFormulaName("");
-    setFormulaExpression("");
-    setCreateDialogOpen(false);
-    // Functionality for posting the formula will be implemented later
+    setIsCreating(true);
+    
+    try {
+      const numParams = calculateParameterCount(formulaExpression);
+      
+      const formulaData = {
+        formula_name: formulaName,
+        formula_desc: formulaDesc || undefined,  
+        formula_expression: formulaExpression,
+        num_parameters: numParams
+      };
+      
+      // Create formula in the database
+      const result = await formulaClientService.submitFormula(formulaData, dispatch);
+      
+      if (result) {
+        // Clear form fields
+        setFormulaName("");
+        setFormulaExpression("");
+        setFormulaDesc("");
+        
+        // Close dialog
+        setCreateDialogOpen(false);
+        
+        // Reload formulas list to include the new formula
+        await formulaClientService.loadFormulas(dispatch);
+        
+        // Show success message
+        toast.success(`Formula "${formulaName}" created successfully!`);
+      }
+    } catch (error) {
+      console.error("Error creating formula:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create formula");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -165,6 +210,18 @@ export default function FormulaSection({
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="formula-desc" className="text-right">
+                      Description
+                    </Label>
+                    <Input
+                      id="formula-desc"
+                      value={formulaDesc}
+                      onChange={(e) => setFormulaDesc(e.target.value)}
+                      className="col-span-3"
+                      placeholder="e.g., Calculates simple interest"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="formula-expression" className="text-right">
                       Expression
                     </Label>
@@ -179,7 +236,9 @@ export default function FormulaSection({
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Save Formula</Button>
+                  <Button type="submit" disabled={isCreating}>
+                    {isCreating ? "Saving..." : "Save Formula"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>

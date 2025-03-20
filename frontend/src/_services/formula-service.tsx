@@ -24,7 +24,7 @@ export const formulaService = {
     return response.json();
   },
 
-  createFormula: async (formula: Formula): Promise<Formula> => {
+  createFormula: async (formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
     const response = await fetch(`${BASE_URL}/formulas`, {
       method: 'POST',
       headers: {
@@ -34,12 +34,13 @@ export const formulaService = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create formula');
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to create formula');
     }
     return response.json();
   },
 
-  updateFormula: async (formulaId: number, formula: Formula): Promise<Formula> => {
+  updateFormula: async (formulaId: number, formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
     const response = await fetch(`${BASE_URL}/formulas/${formulaId}`, {
       method: 'PUT',
       headers: {
@@ -108,23 +109,16 @@ export const formulaClientService = {
     }
   },
 
-  submitFormula: async (formulaInput: string, dispatch: AppDispatch): Promise<boolean> => {
+  submitFormula: async (formulaData: Omit<Formula, 'formula_id'>, dispatch: AppDispatch): Promise<boolean> => {
     try {
-      const newFormula: Formula = {
-        formula_name: "New Formula", // Default name
-        formula_expression: formulaInput,
-        num_parameters: 0, // Default value
-      };
-      
-      const result = await createFormulaAction(newFormula);
+      const result = await createFormulaAction(formulaData);
       
       if (result.success) {
-        toast.success("Formula created successfully!");
-        dispatch(assetAction.setFormulaInput("")); // Clear the input field
-        
         // Add the new formula to the Redux store
         if (result.data) {
           dispatch(assetAction.addFormula(result.data));
+          // Optionally select the newly created formula
+          dispatch(assetAction.setFormulaInput(result.data.formula_expression));
         }
         return true;
       } else {
