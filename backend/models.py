@@ -40,9 +40,11 @@ class SubgroupTag(Base):
     tag_id = Column(Integer, ForeignKey("tags.tag_id", ondelete="CASCADE"))
     subgroup_id = Column(Integer, ForeignKey("subgroups.subgroup_id", ondelete="CASCADE"))
     parent_subgroup_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="CASCADE"), nullable=True)
+    formula_id = Column(Integer, ForeignKey("formulas.formula_id", ondelete="SET NULL"), nullable=True)
     subgroup = relationship("Subgroups", back_populates="subgroup_tags")
     subgroup_tag_name = Column(String, nullable=False)  
     tag = relationship("Tags", back_populates="subgroup_tags")
+    formula = relationship("Formulas", back_populates="subgroup_tags")
   
 
 class Templates(Base):
@@ -61,6 +63,7 @@ class Formulas(Base):
     formula_expression = Column(String, nullable=False)
     num_parameters = Column(Integer, nullable=False)
     templates = relationship("Templates", back_populates="formula", cascade="all, delete")
+    subgroup_tags = relationship("SubgroupTag", back_populates="formula")
 
 class SubgroupTemplate(Base):
     __tablename__ = "subgroup_template"
