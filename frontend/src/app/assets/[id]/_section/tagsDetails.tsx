@@ -16,7 +16,7 @@ import { toast } from "react-toastify";
 import {
   fetchTagsByFileId,
 } from "@/_services/tag-service";
-import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
+//import { addTagToSubgroupAction } from "@/_actions/tag-actions"; // Import addTagToSubgroupAction
 import { Tags } from "@/models/tags";
 
 interface TagDetailsProps {
@@ -76,25 +76,16 @@ export function TagDetails({
     tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+    // In tagsDetails.tsx, modify handleAddTag:
   const handleAddTag = async (tag: Tags) => {
     if (!subgroupId) {
       toast.error("No subgroup selected");
       return;
     }
-
+  
     try {
-      const result = await addTagToSubgroupAction(
-        subgroupId,
-        tag.tag_id,
-        tag.tag_name
-      ); // Add tag to subgroup
-      if (result.success) {
-        onAddTag(tag);
-        setOpen(false);
-        toast.success(`Tag "${tag.tag_name}" was added successfully`);
-      } else {
-        throw new Error(result.error);
-      }
+      onAddTag(tag);
+      setOpen(false);
     } catch (error) {
       console.error("Error adding tag:", error);
       toast.error("Failed to add tag");
