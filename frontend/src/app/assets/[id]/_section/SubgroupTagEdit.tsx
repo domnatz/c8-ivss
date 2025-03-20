@@ -10,9 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { SearchForm } from "@/components/user/search-form";
 import {
   AdjustmentsVerticalIcon,
+  ChevronUpDownIcon,
   DocumentCheckIcon,
   PlusCircleIcon,
   TagIcon,
@@ -175,13 +184,31 @@ export default function SubgroupTagEdit({
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTag ? (
           <>
-            <Input
-              placeholder="Make a formula..."
-              className="bg-background mb-4"
-              value={formulaInput}
-              onChange={(e) => setFormulaInput(e.target.value)}
-              onKeyDown={handleFormulaSubmit} // Add event listener for Enter key
-            />
+            <div className="flex flex-row w-full gap-2 items-center mb-2">
+              <Input
+                placeholder="Make a formula..."
+                className="bg-background w-full"
+                value={formulaInput}
+                onChange={(e) => setFormulaInput(e.target.value)}
+                onKeyDown={handleFormulaSubmit} // Add event listener for Enter key
+              />
+              <Dialog>
+                <Button variant="outline" className="cursor-pointer hover:bg-muted hover:text-blue-600">
+                  <DialogTrigger>
+                    <span className="whitespace-nowrap">Select a Formula</span>
+                  </DialogTrigger>
+                </Button>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Formula</DialogTitle>
+                    <DialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your account and remove your data from our servers.
+                    </DialogDescription>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
+            </div>
 
             {/* Display child tags */}
             {childTagsLoading ? (
@@ -216,7 +243,7 @@ export default function SubgroupTagEdit({
       </div>
 
       <Button variant="outline" className="cursor-pointer">
-        <DocumentCheckIcon /> 
+        <DocumentCheckIcon />
         <span>Save Changes</span>
       </Button>
     </div>
