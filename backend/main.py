@@ -245,21 +245,42 @@ class SubgroupTagCreate(BaseModel):
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
     try:
-        result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
-        existing_subgroup = result.scalars().first()
-        if not existing_subgroup:
-            return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
+        # Only verify the subgroup exists if this is a root-level tag (no parent)
+        if tag.parent_subgroup_tag_id is None:
+            result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+            existing_subgroup = result.scalars().first()
+            if not existing_subgroup:
+                return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
+            
+            # This is a root-level tag, associate it with the subgroup
+            new_subgroup_tag = models.SubgroupTag(
+                subgroup_id=subgroup_id,
+                tag_id=tag.tag_id,
+                subgroup_tag_name=tag.tag_name,
+                parent_subgroup_tag_id=None
+            )
+        else:
+            # This is a child tag, only associate it with the parent tag
+            # First, verify the parent tag exists
+            result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == tag.parent_subgroup_tag_id)
+            )
+            parent_tag = result.scalars().first()
+            if not parent_tag:
+                return JSONResponse(status_code=404, content={"detail": "Parent tag not found"})
+            
+            # Create child tag without subgroup_id
+            new_subgroup_tag = models.SubgroupTag(
+                subgroup_id=None,  # No direct association with subgroup
+                tag_id=tag.tag_id,
+                subgroup_tag_name=tag.tag_name,
+                parent_subgroup_tag_id=tag.parent_subgroup_tag_id
+            )
 
-        new_subgroup_tag = models.SubgroupTag(
-            subgroup_id=subgroup_id,
-            tag_id=tag.tag_id,
-            subgroup_tag_name=tag.tag_name,
-            parent_subgroup_tag_id=tag.parent_subgroup_tag_id  # Ensure this field is set
-        )
         db.add(new_subgroup_tag)
         await db.commit()
         await db.refresh(new_subgroup_tag)
-        print(f"Added tag {tag.tag_id} to subgroup {subgroup_id}")
+        print(f"Added tag {tag.tag_id} to {'subgroup ' + str(subgroup_id) if tag.parent_subgroup_tag_id is None else 'parent tag ' + str(tag.parent_subgroup_tag_id)}")
         return new_subgroup_tag
     except Exception as e:
         print(f"Error adding tag to subgroup: {e}")

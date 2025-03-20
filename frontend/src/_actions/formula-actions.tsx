@@ -50,3 +50,35 @@ export async function evaluateFormula(formulaExpression: string, parameters: Rec
     return { success: false, error: (error as Error).message };
   }
 }
+
+export async function getAllFormulas() {
+  try {
+    const response = await fetch(`${BASE_URL}/formulas`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch formulas');
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error fetching formulas:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function getFormulaById(formulaId: number) {
+  try {
+    const response = await fetch(`${BASE_URL}/formulas/${formulaId}`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch formula');
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error fetching formula:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}

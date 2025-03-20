@@ -271,7 +271,7 @@ export default function SubgroupEdit() {
                   <Button
                     key={tag.subgroup_tag_id}
                     variant="outline"
-                    className={`flex items-center justify-between gap-2 ${
+                    className={`flex items-center cursor-pointer justify-between gap-2 ${
                       tag.subgroup_tag_id === selectedTagId
                         ? "bg-orange-50 text-orange-600"
                         : ""
