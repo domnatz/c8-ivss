@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { assetAction } from "../../_redux/asset-slice";
 import { toast } from "react-toastify";
+import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
 
 interface FormulaSectionProps {
   isDisabled?: boolean;
@@ -43,11 +44,26 @@ export default function FormulaSection({
   const selectedSubgroupTag = useAppSelector(
     (state) => state.assetState.selectedSubgroupTag
   );
+  const selectedFormulaId = useAppSelector(
+    (state) => state.assetState.selectedFormulaId
+  );
 
   // Reset formula input when selected subgroup tag changes
   React.useEffect(() => {
     dispatch(assetAction.setFormulaInput(""));
-  }, [selectedSubgroupTag, dispatch]);
+    // If the selected tag has a formula_id, update the formula input and selected formula ID
+    if (selectedSubgroupTag?.formula_id) {
+      // Find the formula with this ID
+      const formula = formulas.find(f => f.formula_id === selectedSubgroupTag.formula_id);
+      if (formula) {
+        dispatch(assetAction.setFormulaInput(formula.formula_expression));
+        // Fix: Convert formula_id to null if undefined
+        dispatch(assetAction.setSelectedFormulaId(formula.formula_id ?? null));
+      }
+    } else {
+      dispatch(assetAction.setSelectedFormulaId(null));
+    }
+  }, [selectedSubgroupTag, dispatch, formulas]);
 
   // Handle dialog state and fetch formulas when opened
   const handleSelectDialogOpen = async (open: boolean) => {
@@ -58,8 +74,33 @@ export default function FormulaSection({
   };
 
   // Handle formula selection from dialog
-  const handleSelectFormula = (formula: Formula) => {
+  const handleSelectFormula = async (formula: Formula) => {
+    // Update the formula input display
     formulaClientService.selectFormula(formula, dispatch);
+    
+    // Also store the selected formula ID in Redux
+    dispatch(assetAction.setSelectedFormulaId(formula.formula_id ?? null));
+    
+    // DIRECT UPDATE: Update the formula in the backend immediately when selected
+    if (selectedSubgroupTag && formula.formula_id) {
+      try {
+        console.log('Updating formula directly:', {
+          subgroupTagId: selectedSubgroupTag.subgroup_tag_id,
+          formulaId: formula.formula_id
+        });
+        
+        await updateSubgroupTagFormula(
+          selectedSubgroupTag.subgroup_tag_id, 
+          formula.formula_id
+        );
+        
+        toast.success("Formula assigned to tag successfully");
+      } catch (error) {
+        console.error("Error updating formula for tag:", error);
+        toast.error("Failed to assign formula to tag");
+      }
+    }
+    
     setSelectDialogOpen(false);
   };
 
@@ -130,7 +171,10 @@ export default function FormulaSection({
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => dispatch(assetAction.setFormulaInput(""))}
+              onClick={() => {
+                dispatch(assetAction.setFormulaInput(""));
+                dispatch(assetAction.setSelectedFormulaId(null));
+              }}
               disabled={isDisabled}
             >
               Clear

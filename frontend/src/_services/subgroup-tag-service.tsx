@@ -49,3 +49,32 @@ export async function getChildTagsByParentId(parentTagId: number): Promise<Subgr
 
   return response.json();
 }
+
+export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId: number) {
+  console.log(`Making API request to: ${API_URL}/api/subgroups/${subgroupTagId}/formula`, {
+    method: 'PUT',
+    body: JSON.stringify({ formula_id: formulaId }),
+  });
+
+  const response = await fetch(`${API_URL}/api/subgroups/${subgroupTagId}/formula`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ formula_id: formulaId }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Error response from API:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    });
+    throw new Error(`Failed to update subgroup tag formula: ${errorText}`);
+  }
+  
+  // Log successful update
+  console.log('Successfully updated formula for subgroup tag:', subgroupTagId);
+  return response.json();
+}

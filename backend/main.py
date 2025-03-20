@@ -419,3 +419,25 @@ async def get_children_tags(subgroup_tag_id: int, db: AsyncSession = Depends(get
     if not children_tags:
         raise HTTPException(status_code=404, detail="Children tags not found for the given subgroup tag ID")
     return children_tags
+
+@app.put("/api/subgroups/{subgroup_tag_id}/formula")
+async def update_subgroup_tag_formula(
+    subgroup_tag_id: int,
+    formula_data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    # Logic to update the formula ID for a subgroup tag
+    async with db.begin():
+        # Get the subgroup tag
+        stmt = select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+        result = await db.execute(stmt)
+        subgroup_tag = result.scalar_one_or_none()
+        
+        if not subgroup_tag:
+            raise HTTPException(status_code=404, detail=f"Subgroup tag with id {subgroup_tag_id} not found")
+        
+        # Update the formula ID
+        subgroup_tag.formula_id = formula_data.get("formula_id")
+        await db.commit()
+    
+    return {"message": "Formula assigned successfully"}

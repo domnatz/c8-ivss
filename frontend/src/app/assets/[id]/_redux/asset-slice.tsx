@@ -157,6 +157,14 @@ export const assetSlice = createSlice({
         formulas: [...state.formulas, action.payload],
       };
     },
+
+    // Add the setSelectedFormulaId reducer
+    setSelectedFormulaId: (state, action: PayloadAction<number | null>) => {
+      state.selectedFormulaId = action.payload;
+      if (state.selectedSubgroupTag) {
+        state.selectedSubgroupTag.formula_id = action.payload;
+      }
+    },
   },
 });
 

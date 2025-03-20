@@ -19,6 +19,7 @@ export const initialState: {
   formulas: Formula[];
   formulasLoading: boolean;
   formulaInput: string;
+  selectedFormulaId: number | null; // Add this line
 } = {
   asset_id: 0,
   asset_type: "",
@@ -36,4 +37,5 @@ export const initialState: {
   formulas: [],
   formulasLoading: false,
   formulaInput: "",
+  selectedFormulaId: null, // Add this line
 };

@@ -27,6 +27,7 @@ import AddSubgroupTagButton from "./_components/add-subgroup-tag-button";
 import { getChildTagsByParentId } from "@/_services/subgroup-tag-service"; 
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
+import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions"; // Import the new action
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
