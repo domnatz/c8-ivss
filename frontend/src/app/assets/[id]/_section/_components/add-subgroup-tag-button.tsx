@@ -27,11 +27,13 @@ import { addTagToSubgroupTag } from "@/_actions/subgroup-tag-actions";
 interface AddSubgroupTagButtonProps {
   className?: string;
   buttonText?: string;
+  refreshChildTags?: () => Promise<void>; // Add new prop for refreshing child tags
 }
 
 export default function AddSubgroupTagButton({
   className,
   buttonText = "Add Subgroup Tag",
+  refreshChildTags, // Accept the refresh function as a prop
 }: AddSubgroupTagButtonProps) {
   const selectedAsset = useAppSelector(
     (state) => state.assetState.selectedAsset
@@ -94,6 +96,11 @@ export default function AddSubgroupTagButton({
       if (result.success) {
         toast.success(`Added ${tag.subgroup_tag_name} to ${selectedSubgroupTag.subgroup_tag_name}`);
         setIsOpen(false); // Close the dialog after successful addition
+        
+        // Call the refresh function to update the child tags list
+        if (refreshChildTags) {
+          await refreshChildTags();
+        }
       } else {
         toast.error(`Failed to add tag: ${result.error}`);
       }

@@ -1,29 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { SearchForm } from "@/components/user/search-form";
 import {
   AdjustmentsVerticalIcon,
-  ChevronUpDownIcon,
   DocumentCheckIcon,
-  PlusCircleIcon,
   TagIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -42,107 +24,58 @@ import { toast } from "react-toastify";
 import TemplateSelector from "@/app/assets/[id]/_section/_components/template-selection";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import AddSubgroupTagButton from "./_components/add-subgroup-tag-button";
-import { createFormula, getAllFormulas } from "@/_actions/formula-actions"; // Update import
-import { Formula } from "@/models/formula"; // Import the Formula interface
-import { getChildTagsByParentId } from "@/_services/subgroup-tag-service"; // Import the service function
+import { getChildTagsByParentId } from "@/_services/subgroup-tag-service"; 
+import { assetAction } from "../_redux/asset-slice";
+import FormulaSection from "./_components/formula-section";
 
 interface SubgroupTagEditProps {
-  selectedSubgroupTag: Subgroup_tag | null; // Update prop type
+  selectedSubgroupTag: Subgroup_tag | null;
 }
 
 export default function SubgroupTagEdit({
   selectedSubgroupTag,
 }: SubgroupTagEditProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
-    "newest"
-  );
-  const [loading, setLoading] = React.useState(false);
-  const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
-  const [formulaInput, setFormulaInput] = React.useState(""); // Add state for formula input
-  const [childTags, setChildTags] = React.useState<Subgroup_tag[]>([]); // Add state for child tags
-  const [childTagsLoading, setChildTagsLoading] = React.useState(false); // Add loading state for child tags
-  const [formulas, setFormulas] = React.useState<Formula[]>([]); // Add state for formulas
-  const [formulasLoading, setFormulasLoading] = React.useState(false); // Add loading state for formulas
-  const [dialogOpen, setDialogOpen] = React.useState(false); // Add state for dialog
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
   const params = useParams();
-  const dispatch = useAppDispatch(); // Add this line to use dispatch
+  const dispatch = useAppDispatch();
 
-  // Add this function to handle tag deselection
+  // Get state from Redux
+  const childTags = useAppSelector((state) => state.assetState.childTags);
+  const childTagsLoading = useAppSelector(
+    (state) => state.assetState.childTagsLoading
+  );
+
+  // Handle tag deselection
   const handleDeselectTag = () => {
-    dispatch({ type: "assetSlice/selectSubgroupTag", payload: null });
+    dispatch(assetAction.selectSubgroupTag(null));
   };
 
-  // Add this function to handle formula submission
-  const handleFormulaSubmit = async (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      console.log("Submitting formula:", formulaInput); // Add this line
-      const newFormula: Formula = {
-        formula_name: "New Formula", // Replace with actual formula name
-        formula_expression: formulaInput,
-        num_parameters: 0, // Replace with actual number of parameters
-      };
-      const result = await createFormula(newFormula);
-      console.log("Create formula result:", result); // Add this line
-      if (result.success) {
-        toast.success("Formula created successfully!");
-        setFormulaInput(""); // Clear the input field
-      } else {
-        toast.error(`Error creating formula: ${result.error}`);
-      }
-    }
-  };
-
-  // Fetch child tags when a subgroup tag is selected
-  React.useEffect(() => {
+  // Extract the child tags fetching logic into a reusable function
+  const fetchChildTags = React.useCallback(async () => {
     if (selectedSubgroupTag) {
-      setChildTagsLoading(true);
-      getChildTagsByParentId(selectedSubgroupTag.subgroup_tag_id)
-        .then((tags) => {
-          setChildTags(tags);
-        })
-        .catch((error) => {
-          console.error("Error fetching child tags:", error);
-          toast.error("Failed to fetch child tags");
-          setChildTags([]);
-        })
-        .finally(() => {
-          setChildTagsLoading(false);
-        });
-    } else {
-      setChildTags([]);
-    }
-  }, [selectedSubgroupTag]);
-
-  // Add function to fetch formulas when dialog opens
-  const handleDialogOpen = async (open: boolean) => {
-    setDialogOpen(open);
-    if (open && formulas.length === 0) {
-      setFormulasLoading(true);
+      dispatch(assetAction.setChildTagsLoading(true));
       try {
-        const result = await getAllFormulas();
-        if (result.success) {
-          setFormulas(result.data);
-        } else {
-          toast.error(`Error fetching formulas: ${result.error}`);
-        }
+        const tags = await getChildTagsByParentId(
+          selectedSubgroupTag.subgroup_tag_id
+        );
+        dispatch(assetAction.setChildTags(tags));
       } catch (error) {
-        console.error("Error fetching formulas:", error);
-        toast.error("Failed to fetch formulas");
+        console.error("Error fetching child tags:", error);
+        toast.error("Failed to fetch child tags");
+        dispatch(assetAction.setChildTags([]));
       } finally {
-        setFormulasLoading(false);
+        dispatch(assetAction.setChildTagsLoading(false));
       }
+    } else {
+      dispatch(assetAction.setChildTags([]));
     }
-  };
+  }, [selectedSubgroupTag, dispatch]);
 
-  // Add function to handle formula selection
-  const handleSelectFormula = (formula: Formula) => {
-    setFormulaInput(formula.formula_expression);
-    setDialogOpen(false);
-  };
+  // Use the function in useEffect
+  React.useEffect(() => {
+    fetchChildTags();
+  }, [fetchChildTags]);
 
   // Filter child tags based on search query
   const filteredChildTags = childTags.filter((tag) =>
@@ -167,7 +100,6 @@ export default function SubgroupTagEdit({
             {/* Display selected subgroup tag name */}
             {selectedSubgroupTag && (
               <span className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 p-1 pl-4 pr-2  rounded-full ">
-                {/* <TagIcon className="w-4 h-4" /> */}
                 {selectedSubgroupTag.subgroup_tag_name}
                 <XCircleIcon
                   className="w-4 h-4 cursor-pointer hover:text-blue-800"
@@ -176,7 +108,7 @@ export default function SubgroupTagEdit({
               </span>
             )}
           </h2>
-          <AddSubgroupTagButton />
+          <AddSubgroupTagButton refreshChildTags={fetchChildTags} />
         </div>
       </div>
 
@@ -214,52 +146,8 @@ export default function SubgroupTagEdit({
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTag ? (
           <>
-            <div className="inline-flex flex-row w-full gap-2 items-center mb-2 ">
-              <Input
-                placeholder="Make a formula..."
-                className="bg-background w-full"
-                value={formulaInput}
-                onChange={(e) => setFormulaInput(e.target.value)}
-                onKeyDown={handleFormulaSubmit}
-              />
-              <Dialog open={dialogOpen} onOpenChange={handleDialogOpen}>
-                <DialogTrigger className="p-1.5 px-4 border border-b bg-background rounded-md cursor-pointer hover:bg-muted">
-                  <span className="whitespace-nowrap text-sm font-medium">Select a Formula</span>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Select a Formula</DialogTitle>
-                    <DialogDescription>
-                      Choose a formula from the list below to use in your calculation.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="max-h-[50vh] overflow-y-auto">
-                    {formulasLoading ? (
-                      <div className="py-4 text-center text-muted-foreground">
-                        Loading formulas...
-                      </div>
-                    ) : formulas.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {formulas.map((formula) => (
-                          <div
-                            key={formula.formula_id}
-                            className="flex items-center justify-between p-2 bg-background rounded-md border border-zinc-200 hover:bg-muted transition-colors cursor-pointer"
-                            onClick={() => handleSelectFormula(formula)}
-                          >
-                            <span className="font-medium">{formula.formula_name}</span>
-                            <span className="text-sm text-muted-foreground">{formula.formula_expression}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="py-4 text-center text-muted-foreground">
-                        No formulas found. Create one first.
-                      </div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            {/* Use the new FormulaSection component */}
+            <FormulaSection isDisabled={!selectedSubgroupTag} />
 
             {/* Display child tags */}
             {childTagsLoading ? (
@@ -282,7 +170,7 @@ export default function SubgroupTagEdit({
               </div>
             ) : (
               <div className="py-4 text-center text-muted-foreground">
-                No child tags found for this subgroup tag 
+                No child tags found for this subgroup tag
               </div>
             )}
           </>
@@ -293,9 +181,9 @@ export default function SubgroupTagEdit({
         )}
       </div>
 
-      <Button variant="outline" className="cursor-pointer">
-        <DocumentCheckIcon />
-        <span>Save Changes</span>
+      <Button variant="default" className="cursor-pointer">
+        <DocumentCheckIcon className="w-4 h-4 mr-2" />
+        <span>Add to database</span>
       </Button>
     </div>
   );

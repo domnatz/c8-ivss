@@ -3,6 +3,7 @@ import { initialState } from "./asset-state";
 import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
+import { Formula } from "@/models/formula";
 
 export const assetSlice = createSlice({
   name: "assetSlice",
@@ -110,6 +111,50 @@ export const assetSlice = createSlice({
             ? { ...subgroup, subgroup_tags: tags }
             : subgroup
         ),
+      };
+    },
+
+    // Child tags reducers
+    setChildTags: (state, action: PayloadAction<Subgroup_tag[]>) => {
+      return {
+        ...state,
+        childTags: action.payload,
+      };
+    },
+    
+    setChildTagsLoading: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        childTagsLoading: action.payload,
+      };
+    },
+    
+    // Formula reducers
+    setFormulas: (state, action: PayloadAction<Formula[]>) => {
+      return {
+        ...state,
+        formulas: action.payload,
+      };
+    },
+    
+    setFormulasLoading: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        formulasLoading: action.payload,
+      };
+    },
+    
+    setFormulaInput: (state, action: PayloadAction<string>) => {
+      return {
+        ...state,
+        formulaInput: action.payload,
+      };
+    },
+    
+    addFormula: (state, action: PayloadAction<Formula>) => {
+      return {
+        ...state,
+        formulas: [...state.formulas, action.payload],
       };
     },
   },
