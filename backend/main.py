@@ -239,44 +239,32 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
 class SubgroupTagCreate(BaseModel):
     tag_id: int
     tag_name: str
-    parent_subgroup_tag_id: int = None  # Add this field
+    parent_subgroup_tag_id: int = None
+    formula_id: int = None  # Make formula_id optional
 
 @app.post("/api/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
     try:
-        # Only verify the subgroup exists if this is a root-level tag (no parent)
-        if tag.parent_subgroup_tag_id is None:
-            result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
-            existing_subgroup = result.scalars().first()
-            if not existing_subgroup:
-                return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
-            
-            # This is a root-level tag, associate it with the subgroup
-            new_subgroup_tag = models.SubgroupTag(
-                subgroup_id=subgroup_id,
-                tag_id=tag.tag_id,
-                subgroup_tag_name=tag.tag_name,
-                parent_subgroup_tag_id=None
-            )
-        else:
-            # This is a child tag, only associate it with the parent tag
-            # First, verify the parent tag exists
-            result = await db.execute(
-                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == tag.parent_subgroup_tag_id)
-            )
-            parent_tag = result.scalars().first()
-            if not parent_tag:
-                return JSONResponse(status_code=404, content={"detail": "Parent tag not found"})
-            
-            # Create child tag without subgroup_id
-            new_subgroup_tag = models.SubgroupTag(
-                subgroup_id=None,  # No direct association with subgroup
-                tag_id=tag.tag_id,
-                subgroup_tag_name=tag.tag_name,
-                parent_subgroup_tag_id=tag.parent_subgroup_tag_id
-            )
+        result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+        existing_subgroup = result.scalars().first()
+        if not existing_subgroup:
+            return JSONResponse(status_code=404, content={"detail": "Subgroup not found"})
+        
+        # Check if formula exists if formula_id is provided
+        if tag.formula_id:
+            formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == tag.formula_id))
+            formula = formula_result.scalars().first()
+            if not formula:
+                return JSONResponse(status_code=404, content={"detail": "Formula not found"})
 
+        new_subgroup_tag = models.SubgroupTag(
+            subgroup_id=subgroup_id,
+            tag_id=tag.tag_id,
+            subgroup_tag_name=tag.tag_name,
+            parent_subgroup_tag_id=tag.parent_subgroup_tag_id,
+            formula_id=tag.formula_id
+        )
         db.add(new_subgroup_tag)
         await db.commit()
         await db.refresh(new_subgroup_tag)
@@ -397,6 +385,7 @@ class SubgroupTagResponse(BaseModel):
     subgroup_tag_id: int
     subgroup_tag_name: str
     parent_subgroup_tag_id: Optional[int]
+    formula_id: Optional[int]
 
     class Config:
         orm_mode = True
