@@ -29,6 +29,7 @@ import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
 import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions"; 
 import { exportSubgroupTagDataToExcel } from "@/_services/subgroup-tag-service"; 
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -173,11 +174,13 @@ export default function SubgroupTagEdit({
 
             {/* Display child tags */}
             {childTagsLoading ? (
-              <div className="py-4 text-center text-muted-foreground">
-                Loading child tags...
+              <div className="flex flex-col gap-2 ">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Skeleton key={index} className="w-full p-4 rounded-md"/>
+                ))}
               </div>
             ) : sortedChildTags.length > 0 ? (
-              <div className="flex flex-col gap-2 overflow-y-auto max-h-svh">
+              <div className="flex flex-col gap-2 overflow-y-auto">
                 {sortedChildTags.map((tag) => (
                   <div
                     key={tag.subgroup_tag_id}
@@ -209,7 +212,7 @@ export default function SubgroupTagEdit({
         onClick={handleAddToDatabase}
         disabled={!selectedSubgroupTag}
       >
-        <DocumentCheckIcon className="w-4 h-4 mr-2" />
+        <DocumentCheckIcon className="w-4 h-4" />
         <span>Export to Excel</span>
       </Button>
     </div>

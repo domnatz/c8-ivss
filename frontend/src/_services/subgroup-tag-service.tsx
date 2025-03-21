@@ -1,6 +1,6 @@
 import { Subgroup_tag } from "@/models/subgroup-tag";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:8000";
 
 export async function addTagToSubgroupTag(
   subgroupId: number,
@@ -8,7 +8,7 @@ export async function addTagToSubgroupTag(
   tagName: string,
   parentSubgroupTagId?: number
 ): Promise<Subgroup_tag> {
-  const response = await fetch(`${API_URL}/api/subgroups/${subgroupId}/tags`, {
+  const response = await fetch(`${BASE_URL}/api/subgroups/${subgroupId}/tags`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -29,7 +29,7 @@ export async function addTagToSubgroupTag(
 }
 
 export async function getSubgroupTags(subgroupId: number): Promise<Subgroup_tag[]> {
-  const response = await fetch(`${API_URL}/api/subgroups/${subgroupId}/tags`);
+  const response = await fetch(`${BASE_URL}/api/subgroups/${subgroupId}/tags`);
 
   if (!response.ok) {
     const error = await response.json();
@@ -40,7 +40,7 @@ export async function getSubgroupTags(subgroupId: number): Promise<Subgroup_tag[
 }
 
 export async function getChildTagsByParentId(parentTagId: number): Promise<Subgroup_tag[]> {
-  const response = await fetch(`${API_URL}/api/subgroups/${parentTagId}/children_tags`);
+  const response = await fetch(`${BASE_URL}/api/subgroups/${parentTagId}/children_tags`);
 
   if (!response.ok) {
     const error = await response.json();
@@ -51,12 +51,12 @@ export async function getChildTagsByParentId(parentTagId: number): Promise<Subgr
 }
 
 export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId: number) {
-  console.log(`Making API request to: ${API_URL}/api/subgroups/${subgroupTagId}/formula`, {
+  console.log(`Making API request to: ${BASE_URL}/api/subgroups/${subgroupTagId}/formula`, {
     method: 'PUT',
     body: JSON.stringify({ formula_id: formulaId }),
   });
 
-  const response = await fetch(`${API_URL}/api/subgroups/${subgroupTagId}/formula`, {
+  const response = await fetch(`${BASE_URL}/api/subgroups/${subgroupTagId}/formula`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId:
 
 export async function exportSubgroupTagDataToExcel(subgroupTagId: number) {
   try {
-    const response = await fetch(`${API_URL}/api/subgroups/${subgroupTagId}/export`, {
+    const response = await fetch(`${BASE_URL}/api/subgroups/${subgroupTagId}/export`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

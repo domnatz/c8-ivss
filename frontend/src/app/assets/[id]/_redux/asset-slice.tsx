@@ -165,6 +165,46 @@ export const assetSlice = createSlice({
         state.selectedSubgroupTag.formula_id = action.payload;
       }
     },
+
+    // Formula creation state reducers
+    setFormulaName: (state, action: PayloadAction<string>) => {
+      return {
+        ...state,
+        formulaName: action.payload,
+      };
+    },
+    
+    setFormulaExpression: (state, action: PayloadAction<string>) => {
+      return {
+        ...state,
+        formulaExpression: action.payload,
+      };
+    },
+    
+    setFormulaDesc: (state, action: PayloadAction<string>) => {
+      return {
+        ...state,
+        formulaDesc: action.payload,
+      };
+    },
+    
+    setIsCreatingFormula: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        isCreatingFormula: action.payload,
+      };
+    },
+    
+    // Reset formula creation form
+    resetFormulaForm: (state) => {
+      return {
+        ...state,
+        formulaName: "",
+        formulaExpression: "",
+        formulaDesc: "",
+        isCreatingFormula: false,
+      };
+    },
   },
 });
 

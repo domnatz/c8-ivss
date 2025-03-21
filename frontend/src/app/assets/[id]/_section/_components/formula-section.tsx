@@ -29,36 +29,36 @@ export default function FormulaSection({
 }: FormulaSectionProps) {
   const [selectDialogOpen, setSelectDialogOpen] = React.useState(false);
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
-  const [formulaName, setFormulaName] = React.useState("");
-  const [formulaExpression, setFormulaExpression] = React.useState("");
-  const [formulaDesc, setFormulaDesc] = React.useState("");
-  const [isCreating, setIsCreating] = React.useState(false);
   const dispatch = useAppDispatch();
   
   // Get state from Redux
   const formulas = useAppSelector((state) => state.assetState.formulas);
-  const formulasLoading = useAppSelector(
-    (state) => state.assetState.formulasLoading
-  );
+  const formulasLoading = useAppSelector((state) => state.assetState.formulasLoading);
   const formulaInput = useAppSelector((state) => state.assetState.formulaInput);
-  const selectedSubgroupTag = useAppSelector(
-    (state) => state.assetState.selectedSubgroupTag
-  );
-  const selectedFormulaId = useAppSelector(
-    (state) => state.assetState.selectedFormulaId
-  );
+  const selectedSubgroupTag = useAppSelector((state) => state.assetState.selectedSubgroupTag);
+  
+  // Get formula creation states from Redux
+  const formulaName = useAppSelector((state) => state.assetState.formulaName);
+  const formulaExpression = useAppSelector((state) => state.assetState.formulaExpression);
+  const formulaDesc = useAppSelector((state) => state.assetState.formulaDesc);
+  const isCreating = useAppSelector((state) => state.assetState.isCreatingFormula);
 
   // Reset formula input when selected subgroup tag changes
   React.useEffect(() => {
     dispatch(assetAction.setFormulaInput(""));
-    // If the selected tag has a formula_id, update the formula input and selected formula ID
+    
     if (selectedSubgroupTag?.formula_id) {
-      // Find the formula with this ID
-      const formula = formulas.find(f => f.formula_id === selectedSubgroupTag.formula_id);
-      if (formula) {
-        dispatch(assetAction.setFormulaInput(formula.formula_expression));
-        // Fix: Convert formula_id to null if undefined
-        dispatch(assetAction.setSelectedFormulaId(formula.formula_id ?? null));
+      // Load formulas if needed
+      if (formulas.length === 0) {
+        formulaClientService.loadFormulas(dispatch);
+      } 
+      // If formulas are already loaded, find and set the formula
+      else {
+        const formula = formulas.find(f => f.formula_id === selectedSubgroupTag.formula_id);
+        if (formula) {
+          dispatch(assetAction.setFormulaInput(formula.formula_expression));
+          dispatch(assetAction.setSelectedFormulaId(formula.formula_id ?? null));
+        }
       }
     } else {
       dispatch(assetAction.setSelectedFormulaId(null));
@@ -70,6 +70,15 @@ export default function FormulaSection({
     setSelectDialogOpen(open);
     if (open && formulas.length === 0) {
       await formulaClientService.loadFormulas(dispatch);
+    }
+  };
+
+  // Handle dialog state for create dialog
+  const handleCreateDialogOpen = (open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open) {
+      // Reset form when closing dialog
+      dispatch(assetAction.resetFormulaForm());
     }
   };
 
@@ -95,6 +104,12 @@ export default function FormulaSection({
         );
         
         toast.success("Formula assigned to tag successfully");
+        
+        // Update the selectedSubgroupTag in Redux to reflect the formula change
+        dispatch(assetAction.selectSubgroupTag({
+          ...selectedSubgroupTag,
+          formula_id: formula.formula_id
+        }));
       } catch (error) {
         console.error("Error updating formula for tag:", error);
         toast.error("Failed to assign formula to tag");
@@ -118,7 +133,7 @@ export default function FormulaSection({
   // Handle formula creation
   const handleCreateFormula = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsCreating(true);
+    dispatch(assetAction.setIsCreatingFormula(true));
     
     try {
       const numParams = calculateParameterCount(formulaExpression);
@@ -134,10 +149,8 @@ export default function FormulaSection({
       const result = await formulaClientService.submitFormula(formulaData, dispatch);
       
       if (result) {
-        // Clear form fields
-        setFormulaName("");
-        setFormulaExpression("");
-        setFormulaDesc("");
+        // Reset form via Redux
+        dispatch(assetAction.resetFormulaForm());
         
         // Close dialog
         setCreateDialogOpen(false);
@@ -152,7 +165,7 @@ export default function FormulaSection({
       console.error("Error creating formula:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create formula");
     } finally {
-      setIsCreating(false);
+      dispatch(assetAction.setIsCreatingFormula(false));
     }
   };
 
@@ -224,7 +237,7 @@ export default function FormulaSection({
             </DialogContent>
           </Dialog>
           
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <Dialog open={createDialogOpen} onOpenChange={handleCreateDialogOpen}>
             <DialogTrigger
               disabled={isDisabled}
               asChild
@@ -247,7 +260,7 @@ export default function FormulaSection({
                     <Input
                       id="formula-name"
                       value={formulaName}
-                      onChange={(e) => setFormulaName(e.target.value)}
+                      onChange={(e) => dispatch(assetAction.setFormulaName(e.target.value))}
                       className="col-span-3"
                       placeholder="e.g., Simple Interest"
                       required
@@ -260,7 +273,7 @@ export default function FormulaSection({
                     <Input
                       id="formula-desc"
                       value={formulaDesc}
-                      onChange={(e) => setFormulaDesc(e.target.value)}
+                      onChange={(e) => dispatch(assetAction.setFormulaDesc(e.target.value))}
                       className="col-span-3"
                       placeholder="e.g., Calculates simple interest"
                     />
@@ -272,7 +285,7 @@ export default function FormulaSection({
                     <Input
                       id="formula-expression"
                       value={formulaExpression}
-                      onChange={(e) => setFormulaExpression(e.target.value)}
+                      onChange={(e) => dispatch(assetAction.setFormulaExpression(e.target.value))}
                       className="col-span-3"
                       placeholder="e.g., P*R*T/100"
                       required
