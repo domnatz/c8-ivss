@@ -64,7 +64,7 @@ export default function SubgroupEdit() {
   const [subgroupTags, setSubgroupTags] = React.useState<Subgroup_tag[]>([]);
 
   const params = useParams();
-  const assetId = Number(params.id);
+  const assetId = Number(params?.id);
 
   // Select the first subgroup by default when asset changes
   useEffect(() => {

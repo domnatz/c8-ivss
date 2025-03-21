@@ -15,7 +15,7 @@ export default function AssetDetails() {
   const dispatch = useAppDispatch();
 
   // Get the raw param value for debugging
-  const rawId = params.id;
+  const rawId = params?.id;
   // Make sure we're using the correct parameter name and properly convert to number
   const numericAssetId = typeof rawId === "string" ? parseInt(rawId, 10) : NaN;
 
