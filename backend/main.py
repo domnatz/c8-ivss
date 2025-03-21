@@ -64,10 +64,15 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the asset exists
+    asset_result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
+    asset = asset_result.scalars().first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    
+    # Get subgroups (may be empty)
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.asset_id == asset_id))
     subgroups = result.scalars().all()
-    if not subgroups:
-        raise HTTPException(status_code=404, detail="Subgroups not found for the given asset ID")
     return subgroups
 
 @app.get("/api/subgroups/{subgroup_id}")
@@ -215,10 +220,15 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
 
 @app.get("/api/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the file exists
+    file_result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
+    file = file_result.scalars().first()
+    if not file:
+        raise HTTPException(status_code=404, detail="Masterlist file not found")
+    
+    # Get tags (may be empty)
     result = await db.execute(select(models.Tags).where(models.Tags.file_id == file_id))
     tags = result.scalars().all()
-    if not tags:
-        raise HTTPException(status_code=404, detail="Tags not found for the given file ID")
     return tags
 
 @app.get("/api/masterlist/latest")
@@ -300,19 +310,22 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
     
 @app.get("/api/subgroups/{subgroup_id}/tags")
 async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the subgroup exists
+    subgroup_result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
+    subgroup = subgroup_result.scalars().first()
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Subgroup not found")
+    
+    # Get tags (may be empty)
     result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
     tags = result.scalars().all()
-    if not tags:
-        raise HTTPException(status_code=404, detail="Tags not found for the given subgroup ID")
     return tags
 
 @app.get("/api/masterlists")
 async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList))
     masterlists = result.scalars().all()
-    if not masterlists:
-        raise HTTPException(status_code=404, detail="No masterlists found")
-    return masterlists
+    return masterlists  # Just return the result, which might be an empty list
 
 # Pydantic models for formula endpoints
 class FormulaCreate(BaseModel):
@@ -416,10 +429,15 @@ class SubgroupTagResponse(BaseModel):
         
 @app.get("/api/subgroups/{subgroup_tag_id}/children_tags", response_model=List[SubgroupTagResponse])
 async def get_children_tags(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the parent tag exists
+    parent_result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id))
+    parent = parent_result.scalars().first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent tag not found")
+    
+    # Get children tags (may be empty)
     result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.parent_subgroup_tag_id == subgroup_tag_id))
     children_tags = result.scalars().all()
-    if not children_tags:
-        raise HTTPException(status_code=404, detail="Children tags not found for the given subgroup tag ID")
     return children_tags
 
 @app.put("/api/subgroups/{subgroup_tag_id}/formula")
