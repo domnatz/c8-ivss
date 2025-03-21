@@ -27,7 +27,8 @@ import AddSubgroupTagButton from "./_components/add-subgroup-tag-button";
 import { getChildTagsByParentId } from "@/_services/subgroup-tag-service"; 
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
-import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions"; // Import the new action
+import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions"; 
+import { exportSubgroupTagDataToExcel } from "@/_services/subgroup-tag-service"; 
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -50,6 +51,26 @@ export default function SubgroupTagEdit({
   // Handle tag deselection
   const handleDeselectTag = () => {
     dispatch(assetAction.selectSubgroupTag(null));
+  };
+  
+  // Add to database handler function
+  const handleAddToDatabase = async () => {
+    if (!selectedSubgroupTag) {
+      toast.error("Please select a subgroup tag first");
+      return;
+    }
+
+    try {
+      const result = await exportSubgroupTagDataToExcel(selectedSubgroupTag.subgroup_tag_id);
+      if (result.success) {
+        toast.success("Data exported successfully");
+      } else {
+        toast.error(result.error || "Failed to export data");
+      }
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("An unexpected error occurred");
+    }
   };
 
   // Extract the child tags fetching logic into a reusable function
@@ -182,9 +203,14 @@ export default function SubgroupTagEdit({
         )}
       </div>
 
-      <Button variant="default" className="cursor-pointer">
+      <Button 
+        variant="default" 
+        className="cursor-pointer"
+        onClick={handleAddToDatabase}
+        disabled={!selectedSubgroupTag}
+      >
         <DocumentCheckIcon className="w-4 h-4 mr-2" />
-        <span>Add to database</span>
+        <span>Export to Excel</span>
       </Button>
     </div>
   );

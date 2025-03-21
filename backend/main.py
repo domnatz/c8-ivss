@@ -9,8 +9,10 @@ import re
 from typing import List, Dict, Any, Optional
 import csv
 from io import StringIO, BytesIO
-from openpyxl import load_workbook
-from fastapi.responses import JSONResponse
+from openpyxl import load_workbook, Workbook
+from fastapi.responses import JSONResponse, FileResponse
+import os
+import tempfile
 
 # Initialize database
 async def init_models():
@@ -441,3 +443,59 @@ async def update_subgroup_tag_formula(
         await db.commit()
     
     return {"message": "Formula assigned successfully"}
+
+
+@app.post("/api/subgroups/{subgroup_tag_id}/export")
+async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
+    # Get the parent tag
+    stmt = select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+    result = await db.execute(stmt)
+    parent_tag = result.scalar_one_or_none()
+    
+    if not parent_tag:
+        raise HTTPException(status_code=404, detail=f"Subgroup tag with id {subgroup_tag_id} not found")
+    
+    # Get formula if it exists
+    formula = None
+    if parent_tag.formula_id:
+        formula_stmt = select(models.Formulas).where(models.Formulas.formula_id == parent_tag.formula_id)
+        formula_result = await db.execute(formula_stmt)
+        formula = formula_result.scalar_one_or_none()
+    
+    # Get child tags
+    child_tags_stmt = select(models.SubgroupTag).where(models.SubgroupTag.parent_subgroup_tag_id == subgroup_tag_id)
+    child_tags_result = await db.execute(child_tags_stmt)
+    child_tags = child_tags_result.scalars().all()
+    
+    # Create workbook and add data
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Subgroup Tag Data"
+    
+    # Add headers - removed Formula ID and Formula Name
+    headers = ["Parent Tag Name", "Formula Expression", "Child Tags"]
+    for col, header in enumerate(headers, 1):
+        ws.cell(row=1, column=col, value=header)
+    
+    # Add parent tag data
+    ws.cell(row=2, column=1, value=parent_tag.subgroup_tag_name)
+    ws.cell(row=2, column=2, value=formula.formula_expression if formula else "None")
+    
+    # Add child tags - one per cell (starting from row 2, column 3)
+    if child_tags:
+        for i, tag in enumerate(child_tags):
+            ws.cell(row=i+2, column=3, value=tag.subgroup_tag_name)
+    else:
+        ws.cell(row=2, column=3, value="None")
+    
+    # Save to temporary file
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        wb.save(tmp.name)
+        file_path = tmp.name
+    
+    # Return file as download
+    return FileResponse(
+        file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=f"subgroup_tag_{subgroup_tag_id}_export.xlsx"
+    )
