@@ -1,3 +1,5 @@
+# --- Import section ---
+# Core FastAPI components
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,14 +16,17 @@ from fastapi.responses import JSONResponse, FileResponse
 import os
 import tempfile
 
-# Initialize database
+# --- Database initialization ---
+# This function runs at app startup to create database tables
 async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
 
+# Create our FastAPI application
 app = FastAPI(on_startup=[init_models])
 
-# CORS configuration
+# --- CORS configuration ---
+# Allow frontend requests from localhost
 origins = [
     "http://localhost:3000",
 ]
@@ -34,21 +39,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency for database session
+# --- Database session helper ---
+# Creates a new database connection for each request
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
+# --- Base health check endpoint ---
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the FastAPI Backend!"}
 
+# --- Asset Management Endpoints ---
+
+# Get all assets in the system
 @app.get("/api/assets")
 async def get_assets(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets))
     assets = result.scalars().all()
     return assets
 
+# Get a single asset by ID
 @app.get("/api/assets/{asset_id}")
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching asset with asset_id: {asset_id}")
@@ -62,6 +73,7 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
         "asset_type": asset.asset_type,
     }
 
+# Get all subgroups that belong to a specific asset
 @app.get("/api/assets/{asset_id}/subgroups")
 async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
     # First check if the asset exists
@@ -75,6 +87,7 @@ async def get_subgroups(asset_id: int, db: AsyncSession = Depends(get_db)):
     subgroups = result.scalars().all()
     return subgroups
 
+# Get details for a specific subgroup
 @app.get("/api/subgroups/{subgroup_id}")
 async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Fetching subgroup for subgroup_id: {subgroup_id}")
@@ -86,10 +99,12 @@ async def get_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     print(f"Found subgroup: {subgroup}")
     return subgroup
 
+# Data validation model for creating assets
 class AssetCreate(BaseModel):
     asset_name: str
     asset_type: str
 
+# Create a new asset
 @app.post("/api/assets")
 async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
     new_asset = models.Assets(asset_name=asset.asset_name, asset_type=asset.asset_type)
@@ -98,9 +113,11 @@ async def create_asset(asset: AssetCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(new_asset)
     return new_asset
 
+# Data validation for renaming an asset
 class AssetRename(BaseModel):
     asset_name: str
 
+# Rename an existing asset
 @app.put("/api/assets/{asset_id}")
 async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
@@ -113,9 +130,11 @@ async def rename_asset(asset_id: int, asset: AssetRename, db: AsyncSession = Dep
     await db.refresh(existing_asset)
     return existing_asset
 
+# Data validation for creating subgroups
 class SubgroupCreate(BaseModel):
     subgroup_name: str
 
+# Create a new subgroup within an asset
 @app.post("/api/assets/{asset_id}/subgroups")
 async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Assets).where(models.Assets.asset_id == asset_id))
@@ -132,9 +151,11 @@ async def create_subgroup(asset_id: int, subgroup: SubgroupCreate, db: AsyncSess
     await db.refresh(new_subgroup)
     return new_subgroup
 
+# Data validation for renaming subgroups
 class SubgroupRename(BaseModel):
     subgroup_name: str
 
+# Rename an existing subgroup
 @app.put("/api/subgroups/{subgroup_id}")
 async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id))
@@ -147,11 +168,16 @@ async def rename_subgroup(subgroup_id: int, subgroup: SubgroupRename, db: AsyncS
     await db.refresh(existing_subgroup)
     return existing_subgroup
 
+# Data validation for tags
 class Tag(BaseModel):
     tag_name: str
 
+# --- Masterlist Management ---
+
+# Upload a masterlist file (CSV or Excel) and extract tags
 @app.post("/api/upload_masterlist")
 async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    # Validate file type
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Invalid file type")
 
@@ -159,6 +185,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         tags_column = "tags"
         content = await file.read()
 
+        # Handle CSV files
         if file.filename.endswith('.csv'):
             content_str = content.decode("utf-8")
             reader = csv.DictReader(StringIO(content_str))
@@ -172,6 +199,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                 for row in reader:
                     print(f"Processing row: {row}")
                     if tags_column in row and row[tags_column] is not None:
+                        # Split tags by comma and process each one
                         tags = row[tags_column].split(',')
                         for tag_name in tags:
                             tag = models.Tags(tag_name=tag_name.strip(), file_id=masterlist.file_id, tag_type="default")
@@ -181,11 +209,13 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                         print(f"Tags column '{tags_column}' not found or empty in the file")
                         raise HTTPException(status_code=400, detail=f"Tags column '{tags_column}' not found or empty in the file")
 
+        # Handle Excel files
         else:
             workbook = load_workbook(filename=BytesIO(content))
             sheet = workbook.active
             headers = [cell.value for cell in sheet[1]]
             
+            # Find tags column index
             tags_idx = headers.index(tags_column) if tags_column in headers else None
             if tags_idx is None:
                 print(f"Tags column '{tags_column}' not found in the file")
@@ -197,6 +227,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
                 await db.flush()
                 print(f"Added masterlist: {masterlist}")
 
+                # Process each row starting from row 2 (after headers)
                 for row in sheet.iter_rows(min_row=2, values_only=True):
                     print(f"Processing row: {row}")
                     if row[tags_idx] is not None:
@@ -217,7 +248,7 @@ async def upload_masterlist(file: UploadFile = File(...), db: AsyncSession = Dep
         print(f"Error occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     
-
+# Get all tags from a specific masterlist
 @app.get("/api/tags")
 async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     # First check if the file exists
@@ -231,6 +262,7 @@ async def get_tags_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     tags = result.scalars().all()
     return tags
 
+# Get the most recently uploaded masterlist
 @app.get("/api/masterlist/latest")
 async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).order_by(models.MasterList.file_id.desc()).limit(1))
@@ -239,7 +271,7 @@ async def get_latest_masterlist(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No masterlist found")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
-
+# Get masterlist by ID
 @app.get("/api/masterlist/{file_id}")
 async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList).where(models.MasterList.file_id == file_id))
@@ -248,12 +280,16 @@ async def get_masterlist_by_file_id(file_id: int, db: AsyncSession = Depends(get
         raise HTTPException(status_code=404, detail="Masterlist not found for the given file ID")
     return {"file_id": masterlist.file_id, "file_name": masterlist.file_name}
 
+# --- Subgroup Tag Management ---
+
+# Data validation for creating subgroup tags
 class SubgroupTagCreate(BaseModel):
     tag_id: int
     tag_name: str
     parent_subgroup_tag_id: int = None
-    formula_id: int = None  # Make formula_id optional
+    formula_id: int = None  # Optional formula ID
 
+# Add a tag to a subgroup or as a child of another tag
 @app.post("/api/subgroups/{subgroup_id}/tags", status_code=status.HTTP_201_CREATED)
 async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: AsyncSession = Depends(get_db)):
     print(f"Received request to add tag {tag.tag_id} to subgroup {subgroup_id}")
@@ -308,6 +344,7 @@ async def add_tag_to_subgroup(subgroup_id: int, tag: SubgroupTagCreate, db: Asyn
         print(f"Error adding tag to subgroup: {e}")
         return JSONResponse(status_code=500, content={"detail": f"Internal Server Error: {str(e)}"})
     
+# Get all tags for a specific subgroup
 @app.get("/api/subgroups/{subgroup_id}/tags")
 async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     # First check if the subgroup exists
@@ -321,29 +358,35 @@ async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)
     tags = result.scalars().all()
     return tags
 
+# Get all masterlist files
 @app.get("/api/masterlists")
 async def get_all_masterlists(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MasterList))
     masterlists = result.scalars().all()
-    return masterlists  # Just return the result, which might be an empty list
+    return masterlists  # Might be an empty list if none exist
 
-# Pydantic models for formula endpoints
+# --- Formula Management ---
+
+# Data validation for creating formulas
 class FormulaCreate(BaseModel):
     formula_name: str
     formula_desc: str = None
     formula_expression: str
     num_parameters: int
 
+# Data validation for formula evaluation
 class FormulaEvaluationRequest(BaseModel):
     formula_id: int
     parameters: Dict[str, Any]
 
+# Get all formulas
 @app.get("/api/formulas")
 async def get_formulas(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Formulas))
     formulas = result.scalars().all()
     return formulas
 
+# Get a specific formula by ID
 @app.get("/api/formulas/{formula_id}")
 async def get_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
@@ -352,6 +395,7 @@ async def get_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Formula not found")
     return formula
 
+# Create a new formula
 @app.post("/api/formulas")
 async def create_formula(formula: FormulaCreate, db: AsyncSession = Depends(get_db)):
     new_formula = models.Formulas(
@@ -365,6 +409,7 @@ async def create_formula(formula: FormulaCreate, db: AsyncSession = Depends(get_
     await db.refresh(new_formula)
     return new_formula
 
+# Update an existing formula
 @app.put("/api/formulas/{formula_id}")
 async def update_formula(formula_id: int, formula: FormulaCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
@@ -372,6 +417,7 @@ async def update_formula(formula_id: int, formula: FormulaCreate, db: AsyncSessi
     if not existing_formula:
         raise HTTPException(status_code=404, detail="Formula not found")
     
+    # Update all formula fields
     existing_formula.formula_name = formula.formula_name
     existing_formula.formula_desc = formula.formula_desc
     existing_formula.formula_expression = formula.formula_expression
@@ -381,6 +427,7 @@ async def update_formula(formula_id: int, formula: FormulaCreate, db: AsyncSessi
     await db.refresh(existing_formula)
     return existing_formula
 
+# Delete a formula
 @app.delete("/api/formulas/{formula_id}")
 async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
@@ -392,6 +439,7 @@ async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": "Formula deleted successfully"}
 
+# Evaluate a formula with provided parameters
 @app.post("/api/formulas/evaluate")
 async def evaluate_formula(request: FormulaEvaluationRequest, db: AsyncSession = Depends(get_db)):
     # Get the formula
@@ -400,24 +448,24 @@ async def evaluate_formula(request: FormulaEvaluationRequest, db: AsyncSession =
     if not formula:
         raise HTTPException(status_code=404, detail="Formula not found")
     
-    # Simple evaluation of the formula using the provided parameters
     try:
         # Create a safe evaluation environment with only the parameters provided
         eval_env = {**request.parameters}
         
-        # Replace variable names in the expression
+        # Get the formula expression
         expression = formula.formula_expression
         
-        # Basic security check to prevent arbitrary code execution
+        # Basic security check to prevent potentially harmful code execution
         if re.search(r'(__|\bimport\b|\beval\b|\bexec\b|\bcompile\b|\bopen\b|\bread\b|\bwrite\b|\bsys\b|\bos\b)', expression):
             raise ValueError("Potentially unsafe formula expression")
         
+        # Evaluate the formula with the provided parameters
         result = eval(expression, {"__builtins__": {}}, eval_env)
         return {"formula_id": formula.formula_id, "parameters": request.parameters, "result": result}
     except Exception as e:
         return {"formula_id": formula.formula_id, "parameters": request.parameters, "error": str(e)}
     
-    
+# --- Response Model for Subgroup Tags ---
 class SubgroupTagResponse(BaseModel):
     subgroup_tag_id: int
     subgroup_tag_name: str
@@ -427,6 +475,7 @@ class SubgroupTagResponse(BaseModel):
     class Config:
         orm_mode = True
         
+# Get all child tags for a parent tag
 @app.get("/api/subgroups/{subgroup_tag_id}/children_tags", response_model=List[SubgroupTagResponse])
 async def get_children_tags(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
     # First check if the parent tag exists
@@ -440,13 +489,14 @@ async def get_children_tags(subgroup_tag_id: int, db: AsyncSession = Depends(get
     children_tags = result.scalars().all()
     return children_tags
 
+# Update the formula attached to a subgroup tag
 @app.put("/api/subgroups/{subgroup_tag_id}/formula")
 async def update_subgroup_tag_formula(
     subgroup_tag_id: int,
     formula_data: dict,
     db: AsyncSession = Depends(get_db)
 ):
-    # Logic to update the formula ID for a subgroup tag
+    # Update the formula for a subgroup tag
     async with db.begin():
         # Get the subgroup tag
         stmt = select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
@@ -462,7 +512,7 @@ async def update_subgroup_tag_formula(
     
     return {"message": "Formula assigned successfully"}
 
-
+# Export subgroup tag data to Excel
 @app.post("/api/subgroups/{subgroup_tag_id}/export")
 async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
     # Get the parent tag
@@ -485,12 +535,12 @@ async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depe
     child_tags_result = await db.execute(child_tags_stmt)
     child_tags = child_tags_result.scalars().all()
     
-    # Create workbook and add data
+    # Create Excel workbook
     wb = Workbook()
     ws = wb.active
     ws.title = "Subgroup Tag Data"
     
-    # Add headers - removed Formula ID and Formula Name
+    # Add column headers
     headers = ["Parent Tag Name", "Formula Expression", "Child Tags"]
     for col, header in enumerate(headers, 1):
         ws.cell(row=1, column=col, value=header)
@@ -499,19 +549,18 @@ async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depe
     ws.cell(row=2, column=1, value=parent_tag.subgroup_tag_name)
     ws.cell(row=2, column=2, value=formula.formula_expression if formula else "None")
     
-    # Add child tags - one per cell (starting from row 2, column 3)
+    # Add child tags data
     if child_tags:
         for i, tag in enumerate(child_tags):
             ws.cell(row=i+2, column=3, value=tag.subgroup_tag_name)
     else:
         ws.cell(row=2, column=3, value="None")
     
-    # Save to temporary file
+    # Save to temporary file and return as download
     with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
         wb.save(tmp.name)
         file_path = tmp.name
     
-    # Return file as download
     return FileResponse(
         file_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
