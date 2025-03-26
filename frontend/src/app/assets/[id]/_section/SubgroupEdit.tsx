@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TagDetails } from "./tagsDetails";
+import { TagDetails } from "./_components/tag-details";
 import { useEffect } from "react";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";

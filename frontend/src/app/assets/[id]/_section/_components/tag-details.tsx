@@ -36,7 +36,7 @@ export function TagDetails({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [tags, setTags] = React.useState<Tags[]>([]);
   const [loading, setLoading] = React.useState(false);
-
+  
   // Fetch tags based on the selected masterlist ID
   React.useEffect(() => {
     const fetchInitialData = async () => {
