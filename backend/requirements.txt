@@ -19,3 +19,6 @@ asyncpg==0.30.0
 # Testing (optional, if you have tests)
 pytest==7.3.1
 httpx==0.24.1
+
+openpyxl==3.1.5
+python-multipart==0.0.20
