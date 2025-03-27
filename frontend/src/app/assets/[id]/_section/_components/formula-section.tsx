@@ -19,6 +19,7 @@ import {
 import { assetAction } from "../../_redux/asset-slice";
 import { toast } from "react-toastify";
 import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface FormulaSectionProps {
   isDisabled?: boolean;
@@ -201,14 +202,14 @@ export default function FormulaSection({
           {formulaInput && (
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="icon" 
               onClick={() => {
                 dispatch(assetAction.setFormulaInput(""));
                 dispatch(assetAction.setSelectedFormulaId(null));
               }}
               disabled={isDisabled}
             >
-              Clear
+              <XMarkIcon className="w-4 h-4" />
             </Button>
           )}
           
@@ -271,7 +272,7 @@ export default function FormulaSection({
               </DialogHeader>
               <form onSubmit={handleCreateFormula}>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="formula-name" className="text-right">
                       Name
                     </Label>
@@ -284,7 +285,7 @@ export default function FormulaSection({
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="formula-desc" className="text-right">
                       Description
                     </Label>
@@ -296,7 +297,7 @@ export default function FormulaSection({
                       placeholder="e.g., Calculates simple interest"
                     />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="formula-expression" className="text-right">
                       Expression
                     </Label>

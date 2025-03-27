@@ -58,3 +58,11 @@ export async function deleteFormula(formulaId: number): Promise<void> {
     throw new Error(`Failed to delete formula with ID ${formulaId}`);
   }
 }
+
+export async function getFormulaVariables(formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> {
+  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/variables`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch variables for formula with ID ${formulaId}`);
+  }
+  return response.json();
+}

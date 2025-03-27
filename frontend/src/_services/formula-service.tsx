@@ -1,5 +1,5 @@
 import { AppDispatch } from "@/store";
-import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula } from "@/_actions/formula-actions";
+import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables } from "@/_actions/formula-actions";
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
 // Define a fallback URL to use if environment variable isn't set
@@ -25,7 +25,7 @@ export const formulaService = {
   deleteFormula: async (formulaId: number): Promise<void> => {
     return deleteFormula(formulaId);
   },
-//TENTATIVE
+
   evaluateFormula: async (evaluation: FormulaEvaluation): Promise<FormulaEvaluation> => {
     const response = await fetch(`${BASE_URL}/formulas/evaluate`, {
       method: 'POST',
@@ -47,6 +47,10 @@ export const formulaService = {
       throw new Error(`Failed to fetch templates for formula with ID ${formulaId}`);
     }
     return response.json();
+  },
+
+  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
+    return getFormulaVariables(formulaId);
   },
 };
 
@@ -77,5 +81,14 @@ export const formulaClientService = {
 
   selectFormula: (formula: Formula, dispatch: AppDispatch): void => {
     dispatch({ type: 'assetSlice/setFormulaInput', payload: formula.formula_expression });
+  },
+
+  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
+    try {
+      return await formulaService.getFormulaVariables(formulaId);
+    } catch (error) {
+      console.error("Error loading formula variables:", error);
+      return [];
+    }
   }
 };

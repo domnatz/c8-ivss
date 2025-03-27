@@ -22,19 +22,21 @@ import { Subgroup_tag } from "@/models/subgroup-tag";
 import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { toast } from "react-toastify";
 import { SearchForm } from "@/components/user/search-form";
-import { addTagToSubgroupTag } from "@/_actions/subgroup-tag-actions";
+// Removed import for addTagToSubgroupTag
 
-interface AddSubgroupTagButtonProps {
+interface AssignSubgroupTagVariableProps {
   className?: string;
   buttonText?: string;
-  refreshChildTags?: () => Promise<void>; // Add new prop for refreshing child tags
+  variableName?: string;
+  refreshChildTags?: () => Promise<void>;
 }
 
-export default function AddSubgroupTagButton({
+export default function AssignSubgroupTagVariable({
   className,
   buttonText = "Add Subgroup Tag",
-  refreshChildTags, // Accept the refresh function as a prop
-}: AddSubgroupTagButtonProps) {
+  variableName,
+  refreshChildTags,
+}: AssignSubgroupTagVariableProps) {
   const selectedAsset = useAppSelector(
     (state) => state.assetState.selectedAsset
   );
@@ -78,48 +80,24 @@ export default function AddSubgroupTagButton({
     tag.subgroup_tag_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle adding a tag to the selected parent subgroup tag
-  const handleAddTagToSubgroupTag = async (tag: Subgroup_tag) => {
-    if (!selectedSubgroupId || !selectedSubgroupTag) {
-      toast.error("Please select both a subgroup and a parent subgroup tag");
-      return;
-    }
-
-    try {
-      const result = await addTagToSubgroupTag(
-        Number(selectedSubgroupId),
-        tag.tag_id,
-        tag.subgroup_tag_name,
-        selectedSubgroupTag.subgroup_tag_id
-      );
-
-      if (result.success) {
-        toast.success(`Added ${tag.subgroup_tag_name} to ${selectedSubgroupTag.subgroup_tag_name}`);
-        setIsOpen(false); // Close the dialog after successful addition
-        
-        // Call the refresh function to update the child tags list
-        if (refreshChildTags) {
-          await refreshChildTags();
-        }
-      } else {
-        toast.error(`Failed to add tag: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error adding tag:", error);
-      toast.error("An error occurred while adding the tag");
-    }
-  };
+  // Removed handleAddTagToSubgroupTag function
 
   return (
     <div>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        // Safely handle dialog state changes
+        if (selectedSubgroupTag || !open) {
+          setIsOpen(open);
+        }
+      }}>
         <DialogTrigger 
-          className={`border px-4 py-2 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2 ${
-            selectedSubgroupTag 
-              ? "bg-foreground text-background cursor-pointer" 
-              : "bg-muted-foreground text-gray-200 opacity-70 cursor-not-allowed"
-          }`}
-          onClick={() => setIsOpen(true)}
+          className={`border bg-background cursor-pointer px-4 py-2 w-full flex flex-row rounded-md items-center text-sm font-medium gap-2`}
+          onClick={(e) => {
+            e.preventDefault();
+            if (selectedSubgroupTag) {
+              setIsOpen(true);
+            }
+          }}
           disabled={!selectedSubgroupTag} 
         >
           <PlusCircleIcon className="h-5 w-5" />
@@ -127,38 +105,40 @@ export default function AddSubgroupTagButton({
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Subgroup Tags</DialogTitle>
+            <DialogTitle>View Available Tags</DialogTitle>
             <DialogDescription>
-              {selectedSubgroupTag 
-                ? `Select tags to add to "${selectedSubgroupTag.subgroup_tag_name}"`
-                : "Select a parent subgroup tag first"}
+              {variableName 
+                ? `Browse available tags for the variable "${variableName}"`
+                : "Browse available tags for this variable"}
             </DialogDescription>
           </DialogHeader>
 
           <div>
             {/* Subgroup selection dropdown */}
-            <Select
-              value={selectedSubgroupId}
-              onValueChange={handleSubgroupChange}
-            >
-              <SelectTrigger id="subgroup-select" className="w-full">
-                <SelectValue placeholder="Select a subgroup" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedAsset?.subgroups?.map((subgroup) => (
-                  <SelectItem
-                    key={subgroup.subgroup_id}
-                    value={subgroup.subgroup_id.toString()}
-                  >
-                    {subgroup.subgroup_name}
-                  </SelectItem>
-                )) || (
-                  <SelectItem value="no-subgroups" disabled>
-                    No subgroups available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            {selectedSubgroupTag && (
+              <Select
+                value={selectedSubgroupId}
+                onValueChange={handleSubgroupChange}
+              >
+                <SelectTrigger id="subgroup-select" className="w-full">
+                  <SelectValue placeholder="Select a subgroup" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedAsset?.subgroups?.map((subgroup) => (
+                    <SelectItem
+                      key={subgroup.subgroup_id}
+                      value={subgroup.subgroup_id.toString()}
+                    >
+                      {subgroup.subgroup_name}
+                    </SelectItem>
+                  )) || (
+                    <SelectItem value="no-subgroups" disabled>
+                      No subgroups available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Add search form when subgroup is selected */}
             {selectedSubgroupId && !isLoading && subgroupTags.length > 0 && (
@@ -182,15 +162,13 @@ export default function AddSubgroupTagButton({
                 ) : filteredTags.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {filteredTags.map((tag) => (
-                      <Button
+                      <div
                         key={tag.subgroup_tag_id}
-                        variant="outline"
-                        className="flex items-center justify-between gap-2"
-                        onClick={() => handleAddTagToSubgroupTag(tag)}
+                        className="flex items-center bg-background p-2 px-4 border rounded-md justify-between font-medium text-sm cursor-pointer hover:bg-muted gap-2"
                       >
                         {tag.subgroup_tag_name}
                         <PlusCircleIcon className="h-4 w-4 ml-1" />
-                      </Button>
+                      </div>
                     ))}
                   </div>
                 ) : (
