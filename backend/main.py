@@ -1,6 +1,6 @@
 # --- Import section ---
 # Core FastAPI components
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -493,33 +493,169 @@ async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": "Formula deleted successfully"}
 
-#TENTATIVE, FOR FUTURE USE IN CASE NEEDED
-# Evaluate a formula with provided parameters
-@app.post("/api/formulas/evaluate")
-async def evaluate_formula(request: FormulaEvaluationRequest, db: AsyncSession = Depends(get_db)):
-    # Get the formula
-    result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == request.formula_id))
-    formula = result.scalars().first()
+# Response model for variables with tag info
+class VariableWithTagResponse(BaseModel):
+    variable_id: int
+    variable_name: str
+    subgroup_tag_id: Optional[int] = None
+    subgroup_tag_name: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+# Map a variable to a tag
+@app.put("/api/formula-variables/{variable_id}/map")
+async def map_variable_to_tag(
+    variable_id: int, 
+    subgroup_tag_id: int = Body(...), 
+    db: AsyncSession = Depends(get_db)
+):
+    # Find the variable
+    var_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.variable_id == variable_id)
+    )
+    variable = var_result.scalars().first()
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    
+    # Find the tag
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+    )
+    tag = tag_result.scalars().first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Subgroup tag not found")
+    
+    # Update the variable with the tag ID
+    variable.subgroup_tag_id = subgroup_tag_id
+    await db.commit()
+    await db.refresh(variable)
+    
+    return {
+        "variable_id": variable.variable_id,
+        "variable_name": variable.variable_name,
+        "subgroup_tag_id": variable.subgroup_tag_id
+    }
+
+# Get all variables for a formula with their tag mappings
+@app.get("/api/formulas/{formula_id}/variables", response_model=List[VariableWithTagResponse])
+async def get_formula_variables(formula_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the formula exists
+    formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    formula = formula_result.scalars().first()
     if not formula:
         raise HTTPException(status_code=404, detail="Formula not found")
     
-    try:
-        # Create a safe evaluation environment with only the parameters provided
-        eval_env = {**request.parameters}
-        
-        # Get the formula expression
-        expression = formula.formula_expression
-        
-        # Basic security check to prevent potentially harmful code execution
-        if re.search(r'(__|\bimport\b|\beval\b|\bexec\b|\bcompile\b|\bopen\b|\bread\b|\bwrite\b|\bsys\b|\bos\b)', expression):
-            raise ValueError("Potentially unsafe formula expression")
-        
-        # Evaluate the formula with the provided parameters
-        result = eval(expression, {"__builtins__": {}}, eval_env)
-        return {"formula_id": formula.formula_id, "parameters": request.parameters, "result": result}
-    except Exception as e:
-        return {"formula_id": formula.formula_id, "parameters": request.parameters, "error": str(e)}
+    # Get variables with their tag mappings
+    result = await db.execute(select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula_id))
+    variables = result.scalars().all()
     
+    # Get tag names for variables that have mappings
+    response_variables = []
+    for variable in variables:
+        var_data = {
+            "variable_id": variable.variable_id,
+            "variable_name": variable.variable_name,
+            "subgroup_tag_id": variable.subgroup_tag_id,
+            "subgroup_tag_name": None
+        }
+        
+        if variable.subgroup_tag_id:
+            tag_result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
+            )
+            tag = tag_result.scalars().first()
+            if tag:
+                var_data["subgroup_tag_name"] = tag.subgroup_tag_name
+        
+        response_variables.append(var_data)
+    
+    return response_variables
+
+#TENTATIVE, FOR FUTURE USE IN CASE NEEDED
+# Evaluate formula (updated to use variable mappings)
+@app.post("/api/formulas/evaluate")
+async def evaluate_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
+    # Find the formula
+    formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    formula = formula_result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    # Get the expression
+    expression = formula.formula_expression
+    
+    try:
+        # Get all variables for this formula
+        variables_result = await db.execute(
+            select(models.FormulaVariable)
+            .where(models.FormulaVariable.formula_id == formula.formula_id)
+        )
+        variables = variables_result.scalars().all()
+        
+        # Prepare evaluation environment
+        eval_env = {}
+        missing_tags = []
+        
+        for variable in variables:
+            if not variable.subgroup_tag_id:
+                missing_tags.append(variable.variable_name)
+                continue
+                
+            # Get the tag value
+            tag_result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
+            )
+            tag = tag_result.scalars().first()
+            
+            if not tag or tag.tag_value is None:
+                missing_tags.append(variable.variable_name)
+                continue
+            
+            # Add to evaluation environment
+            var_name = variable.variable_name
+            var_value = tag.tag_value
+            
+            # Try to convert value to appropriate type
+            try:
+                if isinstance(var_value, str):
+                    if var_value.lower() == "true":
+                        eval_env[var_name] = True
+                    elif var_value.lower() == "false":
+                        eval_env[var_name] = False
+                    else:
+                        # Try to convert to number
+                        try:
+                            eval_env[var_name] = float(var_value)
+                        except:
+                            eval_env[var_name] = var_value
+                else:
+                    eval_env[var_name] = var_value
+            except:
+                eval_env[var_name] = var_value
+        
+        # Check if we're missing any tag values
+        if missing_tags:
+            return {
+                "formula_id": formula.formula_id,
+                "error": f"Missing tag values for variables: {', '.join(missing_tags)}"
+            }
+        
+        # Replace $variable with variable names in expression
+        for var_name in eval_env:
+            expression = expression.replace(f"${var_name}", var_name)
+        
+        # Evaluate the formula
+        result = eval(expression, {"__builtins__": {}}, eval_env)
+        return {
+            "formula_id": formula.formula_id,
+            "result": result
+        }
+    except Exception as e:
+        return {
+            "formula_id": formula.formula_id,
+            "error": str(e)
+        }
 # --- Response Model for Subgroup Tags ---
 class SubgroupTagResponse(BaseModel):
     subgroup_tag_id: int
@@ -621,3 +757,38 @@ async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depe
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename=f"subgroup_tag_{subgroup_tag_id}_export.xlsx"
     )
+
+# Get all variables for a formula with their tag mappings
+@app.get("/api/formulas/{formula_id}/variables", response_model=List[VariableWithTagResponse])
+async def get_formula_variables(formula_id: int, db: AsyncSession = Depends(get_db)):
+    # First check if the formula exists
+    formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
+    formula = formula_result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    # Get variables with their tag mappings
+    result = await db.execute(select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula_id))
+    variables = result.scalars().all()
+    
+    # Get tag names for variables that have mappings
+    response_variables = []
+    for variable in variables:
+        var_data = {
+            "variable_id": variable.variable_id,
+            "variable_name": variable.variable_name,
+            "subgroup_tag_id": variable.subgroup_tag_id,
+            "subgroup_tag_name": None
+        }
+        
+        if variable.subgroup_tag_id:
+            tag_result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
+            )
+            tag = tag_result.scalars().first()
+            if tag:
+                var_data["subgroup_tag_name"] = tag.subgroup_tag_name
+        
+        response_variables.append(var_data)
+    
+    return response_variables

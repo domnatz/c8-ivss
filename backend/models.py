@@ -70,7 +70,9 @@ class FormulaVariable(Base):
     variable_id = Column(Integer, primary_key=True, index=True)
     formula_id = Column(Integer, ForeignKey("formulas.formula_id", ondelete="CASCADE"))
     variable_name = Column(String, nullable=False)
+    subgroup_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="SET NULL"), nullable=True)
     formula = relationship("Formulas", back_populates="variables")
+    subgroup_tag = relationship("SubgroupTag")
 
 class SubgroupTemplate(Base):
     __tablename__ = "subgroup_template"
