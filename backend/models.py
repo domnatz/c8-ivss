@@ -64,6 +64,14 @@ class Formulas(Base):
     num_parameters = Column(Integer, nullable=False)
     templates = relationship("Templates", back_populates="formula", cascade="all, delete")
     subgroup_tags = relationship("SubgroupTag", back_populates="formula")
+    variables = relationship("FormulaVariable", back_populates="formula", cascade="all, delete")
+
+class FormulaVariable(Base):
+    __tablename__ = "formula_variables"
+    variable_id = Column(Integer, primary_key=True, index=True)
+    formula_id = Column(Integer, ForeignKey("formulas.formula_id", ondelete="CASCADE"))
+    variable_name = Column(String, nullable=False)
+    formula = relationship("Formulas", back_populates="variables")
 
 class SubgroupTemplate(Base):
     __tablename__ = "subgroup_template"
