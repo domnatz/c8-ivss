@@ -1,10 +1,11 @@
+
 export interface Formula {
-    formula_id?: number;
-    formula_name: string;
-    formula_desc?: string;
-    formula_expression: string;
-    num_parameters: number;
-  }
+  formula_id?: number;
+  formula_name: string;
+  formula_desc?: string;
+  formula_expression: string;
+  variables?: Array<{ variable_name: string, variable_id?: number }>;
+}
   
   export interface Template {
     template_id?: number;

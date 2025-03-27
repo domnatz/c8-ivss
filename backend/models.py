@@ -61,7 +61,6 @@ class Formulas(Base):
     formula_name = Column(String, nullable=False)
     formula_desc = Column(String)
     formula_expression = Column(String, nullable=False)
-    num_parameters = Column(Integer, nullable=False)
     templates = relationship("Templates", back_populates="formula", cascade="all, delete")
     subgroup_tags = relationship("SubgroupTag", back_populates="formula")
     variables = relationship("FormulaVariable", back_populates="formula", cascade="all, delete")

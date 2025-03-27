@@ -119,55 +119,73 @@ export default function FormulaSection({
     setSelectDialogOpen(false);
   };
 
-  // Calculate number of parameters in formula expression
-  const calculateParameterCount = (expression: string): number => {
-    // Find unique variable names in the expression (simple approach)
-    const variableMatches = expression.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
-    const uniqueVariables = new Set(variableMatches);
-    // Remove any JavaScript keywords or functions that might have been matched
-    const jsKeywords = ['Math', 'parseInt', 'parseFloat', 'Number', 'String', 'Boolean', 'Array', 'Object'];
-    jsKeywords.forEach(keyword => uniqueVariables.delete(keyword));
-    return uniqueVariables.size;
+  // Extract variables from formula expression (with $ prefix)
+  const extractVariables = (expression: string): string[] => {
+    // Find all variables with $ prefix
+    const regex = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    const matches = expression.match(regex);
+    
+    if (!matches) return [];
+    
+    // Remove $ prefix and return unique variable names
+    const uniqueVars = Array.from(
+      new Set(matches.map(match => match.substring(1)))
+    );
+    
+    return uniqueVars;
   };
 
-  // Handle formula creation
-  const handleCreateFormula = async (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(assetAction.setIsCreatingFormula(true));
-    
-    try {
-      const numParams = calculateParameterCount(formulaExpression);
-      
-      const formulaData = {
-        formula_name: formulaName,
-        formula_desc: formulaDesc || undefined,  
-        formula_expression: formulaExpression,
-        num_parameters: numParams
-      };
-      
-      // Create formula in the database
-      const result = await formulaClientService.submitFormula(formulaData, dispatch);
-      
-      if (result) {
-        // Reset form via Redux
-        dispatch(assetAction.resetFormulaForm());
-        
-        // Close dialog
-        setCreateDialogOpen(false);
-        
-        // Reload formulas list to include the new formula
-        await formulaClientService.loadFormulas(dispatch);
-        
-        // Show success message
-        toast.success(`Formula "${formulaName}" created successfully!`);
-      }
-    } catch (error) {
-      console.error("Error creating formula:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create formula");
-    } finally {
-      dispatch(assetAction.setIsCreatingFormula(false));
-    }
+  // Calculate number of parameters in formula expression
+  const calculateParameterCount = (expression: string): number => {
+    // Use the extracted variables function to find variables with $ prefix
+    const variables = extractVariables(expression);
+    return variables.length;
   };
+
+        // Handle formula creation
+    const handleCreateFormula = async (e: React.FormEvent) => {
+      e.preventDefault();
+      dispatch(assetAction.setIsCreatingFormula(true));
+      
+      try {
+        // Extract variables with $ prefix
+        const extractedVars = extractVariables(formulaExpression);
+        
+        const formulaData = {
+          formula_name: formulaName,
+          formula_desc: formulaDesc || undefined,  
+          formula_expression: formulaExpression,
+          // Remove num_parameters field - it's no longer in the database model
+          variables: extractedVars.map(varName => ({
+            variable_name: varName
+          }))
+        };
+        
+        console.log("Sending formula data:", formulaData);
+        
+        // Create formula in the database
+        const result = await formulaClientService.submitFormula(formulaData, dispatch);
+        
+        if (result) {
+          // Reset form via Redux
+          dispatch(assetAction.resetFormulaForm());
+          
+          // Close dialog
+          setCreateDialogOpen(false);
+          
+          // Reload formulas list to include the new formula
+          await formulaClientService.loadFormulas(dispatch);
+          
+          // Show success message
+          toast.success(`Formula "${formulaName}" created successfully!`);
+        }
+      } catch (error) {
+        console.error("Error creating formula:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to create formula");
+      } finally {
+        dispatch(assetAction.setIsCreatingFormula(false));
+      }
+    };
 
   return (
     <div className="inline-flex flex-row w-full gap-2 items-center mb-2">
@@ -248,7 +266,7 @@ export default function FormulaSection({
               <DialogHeader>
                 <DialogTitle>Create a New Formula</DialogTitle>
                 <DialogDescription>
-                  Enter a name and expression for your new formula.
+                  Enter a name and expression for your new formula. Use $variable to define variables (e.g., $pressure + $temperature * 2).
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateFormula}>
@@ -287,7 +305,7 @@ export default function FormulaSection({
                       value={formulaExpression}
                       onChange={(e) => dispatch(assetAction.setFormulaExpression(e.target.value))}
                       className="col-span-3"
-                      placeholder="e.g., P*R*T/100"
+                      placeholder="e.g., $principal*$rate*$time/100"
                       required
                     />
                   </div>

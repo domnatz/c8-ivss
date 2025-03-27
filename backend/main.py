@@ -4,6 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete
 from backend.database import AsyncSessionLocal, engine
 from backend import models
 from pydantic import BaseModel
@@ -395,19 +396,53 @@ async def get_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Formula not found")
     return formula
 
+# Data validation for creating formulas - remove num_parameters
+class FormulaCreate(BaseModel):
+    formula_name: str
+    formula_desc: str = None
+    formula_expression: str
+
+# Helper function to extract variables from formula expression
+def extract_variables(formula_expression):
+    # Find all instances of $variable in the expression
+    # The pattern finds any $ followed by word characters (letters, numbers, underscore)
+    variables = re.findall(r'\$([a-zA-Z_][a-zA-Z0-9_]*)', formula_expression)
+    # Return unique variable names without the $ sign
+    return list(set(variables))
+
 # Create a new formula
 @app.post("/api/formulas")
 async def create_formula(formula: FormulaCreate, db: AsyncSession = Depends(get_db)):
-    new_formula = models.Formulas(
-        formula_name=formula.formula_name,
-        formula_desc=formula.formula_desc,
-        formula_expression=formula.formula_expression,
-        num_parameters=formula.num_parameters
-    )
-    db.add(new_formula)
-    await db.commit()
+    async with db.begin():
+        new_formula = models.Formulas(
+            formula_name=formula.formula_name,
+            formula_desc=formula.formula_desc,
+            formula_expression=formula.formula_expression
+        )
+        db.add(new_formula)
+        await db.flush()  # Get the formula_id
+        
+        # Rest of the function stays the same...  # Get the formula_id
+        
+        # Extract variables from the formula expression
+        variable_names = extract_variables(formula.formula_expression)
+        
+        # Create variable records
+        for var_name in variable_names:
+            variable = models.FormulaVariable(
+                formula_id=new_formula.formula_id,
+                variable_name=var_name  # Store without the $ prefix
+            )
+            db.add(variable)
+    
     await db.refresh(new_formula)
-    return new_formula
+    
+    # Fetch variables to include in response
+    variables_stmt = select(models.FormulaVariable).where(models.FormulaVariable.formula_id == new_formula.formula_id)
+    variables_result = await db.execute(variables_stmt)
+    variables = variables_result.scalars().all()
+    
+    return {**new_formula.__dict__, "variables": [{"variable_id": v.variable_id, "variable_name": v.variable_name} for v in variables]}
 
 # Update an existing formula
 @app.put("/api/formulas/{formula_id}")
@@ -417,16 +452,35 @@ async def update_formula(formula_id: int, formula: FormulaCreate, db: AsyncSessi
     if not existing_formula:
         raise HTTPException(status_code=404, detail="Formula not found")
     
-    # Update all formula fields
-    existing_formula.formula_name = formula.formula_name
-    existing_formula.formula_desc = formula.formula_desc
-    existing_formula.formula_expression = formula.formula_expression
-    existing_formula.num_parameters = formula.num_parameters
+    async with db.begin():
+        # Update formula fields
+        existing_formula.formula_name = formula.formula_name
+        existing_formula.formula_desc = formula.formula_desc
+        existing_formula.formula_expression = formula.formula_expression
+        
+        # Handle variables - first delete all existing
+        await db.execute(
+            delete(models.FormulaVariable)
+            .where(models.FormulaVariable.formula_id == formula_id)
+        )
+        
+        # Extract variables from the updated formula expression
+        variable_names = extract_variables(formula.formula_expression)
+        
+        # Create new variable records
+        for var_name in variable_names:
+            new_var = models.FormulaVariable(
+                formula_id=formula_id,
+                variable_name=var_name  # Store without the $ prefix
+            )
+            db.add(new_var)
     
-    await db.commit()
-    await db.refresh(existing_formula)
-    return existing_formula
-
+    # Fetch updated variables to include in response
+    variables_stmt = select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula_id)
+    variables_result = await db.execute(variables_stmt)
+    variables = variables_result.scalars().all()
+    
+    return {**existing_formula.__dict__, "variables": [{"variable_id": v.variable_id, "variable_name": v.variable_name} for v in variables]}
 # Delete a formula
 @app.delete("/api/formulas/{formula_id}")
 async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
