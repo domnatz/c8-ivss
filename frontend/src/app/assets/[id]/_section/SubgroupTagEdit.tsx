@@ -219,6 +219,7 @@ export default function SubgroupTagEdit({
                     <AssignSubgroupTagVariable
                      buttonText={`Assign tag to ${variable.variable_name}`}
                      variableName={variable.variable_name} // Pass the variable name
+                     variableId={variable.variable_id} // Add the variable ID
                      />
                   </div>
                 ))}

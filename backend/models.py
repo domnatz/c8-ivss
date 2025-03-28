@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -70,9 +70,7 @@ class FormulaVariable(Base):
     variable_id = Column(Integer, primary_key=True, index=True)
     formula_id = Column(Integer, ForeignKey("formulas.formula_id", ondelete="CASCADE"))
     variable_name = Column(String, nullable=False)
-    subgroup_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="SET NULL"), nullable=True)
     formula = relationship("Formulas", back_populates="variables")
-    subgroup_tag = relationship("SubgroupTag")
 
 class SubgroupTemplate(Base):
     __tablename__ = "subgroup_template"
@@ -80,3 +78,20 @@ class SubgroupTemplate(Base):
     template_id = Column(Integer, ForeignKey("templates.template_id", ondelete="CASCADE"), primary_key=True)
     subgroup = relationship("Subgroups", back_populates="templates")
     template = relationship("Templates", back_populates="subgroups")
+
+class VariableTagMapping(Base):
+    __tablename__ = "variable_tag_mappings"
+    mapping_id = Column(Integer, primary_key=True, index=True)
+    variable_id = Column(Integer, ForeignKey("formula_variables.variable_id", ondelete="CASCADE"))
+    subgroup_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="CASCADE"))
+    context_tag_id = Column(Integer, ForeignKey("subgroup_tag.subgroup_tag_id", ondelete="CASCADE"))
+    
+    # Relationships
+    variable = relationship("FormulaVariable")
+    target_tag = relationship("SubgroupTag", foreign_keys=[subgroup_tag_id])
+    context_tag = relationship("SubgroupTag", foreign_keys=[context_tag_id])
+    
+    # Enforce uniqueness - each variable can only have one mapping per context
+    __table_args__ = (
+        UniqueConstraint('variable_id', 'context_tag_id', name='uq_variable_context'),
+    )

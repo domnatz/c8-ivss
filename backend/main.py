@@ -503,11 +503,13 @@ class VariableWithTagResponse(BaseModel):
     class Config:
         orm_mode = True
 
+class VariableMappingRequest(BaseModel):
+    subgroup_tag_id: int
 # Map a variable to a tag
 @app.put("/api/formula-variables/{variable_id}/map")
 async def map_variable_to_tag(
     variable_id: int, 
-    subgroup_tag_id: int = Body(...), 
+    mapping: VariableMappingRequest,  # Use the Pydantic model instead of Body(...)
     db: AsyncSession = Depends(get_db)
 ):
     # Find the variable
@@ -518,16 +520,16 @@ async def map_variable_to_tag(
     if not variable:
         raise HTTPException(status_code=404, detail="Variable not found")
     
-    # Find the tag
+    # Find the tag - access the ID from the model
     tag_result = await db.execute(
-        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
     )
     tag = tag_result.scalars().first()
     if not tag:
         raise HTTPException(status_code=404, detail="Subgroup tag not found")
     
     # Update the variable with the tag ID
-    variable.subgroup_tag_id = subgroup_tag_id
+    variable.subgroup_tag_id = mapping.subgroup_tag_id
     await db.commit()
     await db.refresh(variable)
     
@@ -536,41 +538,6 @@ async def map_variable_to_tag(
         "variable_name": variable.variable_name,
         "subgroup_tag_id": variable.subgroup_tag_id
     }
-
-# Get all variables for a formula with their tag mappings
-@app.get("/api/formulas/{formula_id}/variables", response_model=List[VariableWithTagResponse])
-async def get_formula_variables(formula_id: int, db: AsyncSession = Depends(get_db)):
-    # First check if the formula exists
-    formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
-    formula = formula_result.scalars().first()
-    if not formula:
-        raise HTTPException(status_code=404, detail="Formula not found")
-    
-    # Get variables with their tag mappings
-    result = await db.execute(select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula_id))
-    variables = result.scalars().all()
-    
-    # Get tag names for variables that have mappings
-    response_variables = []
-    for variable in variables:
-        var_data = {
-            "variable_id": variable.variable_id,
-            "variable_name": variable.variable_name,
-            "subgroup_tag_id": variable.subgroup_tag_id,
-            "subgroup_tag_name": None
-        }
-        
-        if variable.subgroup_tag_id:
-            tag_result = await db.execute(
-                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
-            )
-            tag = tag_result.scalars().first()
-            if tag:
-                var_data["subgroup_tag_name"] = tag.subgroup_tag_name
-        
-        response_variables.append(var_data)
-    
-    return response_variables
 
 #TENTATIVE, FOR FUTURE USE IN CASE NEEDED
 # Evaluate formula (updated to use variable mappings)
@@ -760,14 +727,18 @@ async def export_subgroup_tag_data(subgroup_tag_id: int, db: AsyncSession = Depe
 
 # Get all variables for a formula with their tag mappings
 @app.get("/api/formulas/{formula_id}/variables", response_model=List[VariableWithTagResponse])
-async def get_formula_variables(formula_id: int, db: AsyncSession = Depends(get_db)):
+async def get_formula_variables(
+    formula_id: int, 
+    context_tag_id: Optional[int] = None,  # Add optional context parameter
+    db: AsyncSession = Depends(get_db)
+):
     # First check if the formula exists
     formula_result = await db.execute(select(models.Formulas).where(models.Formulas.formula_id == formula_id))
     formula = formula_result.scalars().first()
     if not formula:
         raise HTTPException(status_code=404, detail="Formula not found")
     
-    # Get variables with their tag mappings
+    # Get variables for this formula
     result = await db.execute(select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula_id))
     variables = result.scalars().all()
     
@@ -777,18 +748,234 @@ async def get_formula_variables(formula_id: int, db: AsyncSession = Depends(get_
         var_data = {
             "variable_id": variable.variable_id,
             "variable_name": variable.variable_name,
-            "subgroup_tag_id": variable.subgroup_tag_id,
+            "subgroup_tag_id": None,
             "subgroup_tag_name": None
         }
         
-        if variable.subgroup_tag_id:
-            tag_result = await db.execute(
-                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
+        # If context is provided, look up mappings from VariableTagMapping
+        if context_tag_id:
+            mapping_result = await db.execute(
+                select(models.VariableTagMapping).where(
+                    models.VariableTagMapping.variable_id == variable.variable_id,
+                    models.VariableTagMapping.context_tag_id == context_tag_id
+                )
             )
-            tag = tag_result.scalars().first()
-            if tag:
-                var_data["subgroup_tag_name"] = tag.subgroup_tag_name
+            mapping = mapping_result.scalars().first()
+            
+            if mapping:
+                var_data["subgroup_tag_id"] = mapping.subgroup_tag_id
+                
+                # Get tag name
+                tag_result = await db.execute(
+                    select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+                )
+                tag = tag_result.scalars().first()
+                if tag:
+                    var_data["subgroup_tag_name"] = tag.subgroup_tag_name
         
         response_variables.append(var_data)
     
     return response_variables
+
+@app.get("/api/formula-variables/{variable_id}")
+async def get_variable_by_id(variable_id: int, db: AsyncSession = Depends(get_db)):
+    # Find the variable
+    var_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.variable_id == variable_id)
+    )
+    variable = var_result.scalars().first()
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    
+    # Prepare response data
+    response_data = {
+        "variable_id": variable.variable_id,
+        "variable_name": variable.variable_name,
+        "formula_id": variable.formula_id,
+        "subgroup_tag_id": variable.subgroup_tag_id,
+        "subgroup_tag_name": None
+    }
+    
+    # Get tag name if mapped
+    if variable.subgroup_tag_id:
+        tag_result = await db.execute(
+            select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == variable.subgroup_tag_id)
+        )
+        tag = tag_result.scalars().first()
+        if tag:
+            response_data["subgroup_tag_name"] = tag.subgroup_tag_name
+    
+    return response_data
+
+# Request model for variable mapping
+class VariableMappingRequest(BaseModel):
+    variable_id: int
+    subgroup_tag_id: int  # The tag to map TO
+    context_tag_id: int   # The context WHERE the mapping applies
+
+# Create or update variable mapping
+@app.put("/api/variable-mappings")
+async def create_or_update_variable_mapping(
+    mapping: VariableMappingRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    # Check if variable exists
+    var_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.variable_id == mapping.variable_id)
+    )
+    variable = var_result.scalars().first()
+    if not variable:
+        raise HTTPException(status_code=404, detail="Variable not found")
+    
+    # Check if target tag exists
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+    )
+    tag = tag_result.scalars().first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Target tag not found")
+    
+    # Check if context tag exists
+    context_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.context_tag_id)
+    )
+    context_tag = context_result.scalars().first()
+    if not context_tag:
+        raise HTTPException(status_code=404, detail="Context tag not found")
+    
+    # Check for existing mapping
+    existing_result = await db.execute(
+        select(models.VariableTagMapping).where(
+            models.VariableTagMapping.variable_id == mapping.variable_id,
+            models.VariableTagMapping.context_tag_id == mapping.context_tag_id
+        )
+    )
+    existing_mapping = existing_result.scalars().first()
+    
+    if existing_mapping:
+        # Update existing mapping
+        existing_mapping.subgroup_tag_id = mapping.subgroup_tag_id
+        await db.commit()
+        await db.refresh(existing_mapping)
+        
+        return {
+            "mapping_id": existing_mapping.mapping_id,
+            "variable_id": mapping.variable_id,
+            "variable_name": variable.variable_name,
+            "subgroup_tag_id": mapping.subgroup_tag_id,
+            "subgroup_tag_name": tag.subgroup_tag_name,
+            "context_tag_id": mapping.context_tag_id,
+            "context_tag_name": context_tag.subgroup_tag_name
+        }
+    else:
+        # Create new mapping
+        new_mapping = models.VariableTagMapping(
+            variable_id=mapping.variable_id,
+            subgroup_tag_id=mapping.subgroup_tag_id,
+            context_tag_id=mapping.context_tag_id
+        )
+        db.add(new_mapping)
+        await db.commit()
+        await db.refresh(new_mapping)
+        
+        return {
+            "mapping_id": new_mapping.mapping_id,
+            "variable_id": mapping.variable_id,
+            "variable_name": variable.variable_name,
+            "subgroup_tag_id": mapping.subgroup_tag_id,
+            "subgroup_tag_name": tag.subgroup_tag_name,
+            "context_tag_id": mapping.context_tag_id,
+            "context_tag_name": context_tag.subgroup_tag_name
+        }
+
+# Get variable mapping for a specific context
+@app.get("/api/variable-mappings/{variable_id}")
+async def get_variable_mapping(
+    variable_id: int,
+    context_tag_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    # Find the mapping
+    mapping_result = await db.execute(
+        select(models.VariableTagMapping).where(
+            models.VariableTagMapping.variable_id == variable_id,
+            models.VariableTagMapping.context_tag_id == context_tag_id
+        )
+    )
+    mapping = mapping_result.scalars().first()
+    
+    if not mapping:
+        return {
+            "variable_id": variable_id,
+            "context_tag_id": context_tag_id,
+            "has_mapping": False
+        }
+    
+    # Get variable info
+    var_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.variable_id == variable_id)
+    )
+    variable = var_result.scalars().first()
+    
+    # Get tag info
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+    )
+    tag = tag_result.scalars().first()
+    
+    return {
+        "mapping_id": mapping.mapping_id,
+        "variable_id": variable_id,
+        "variable_name": variable.variable_name if variable else None,
+        "subgroup_tag_id": mapping.subgroup_tag_id,
+        "subgroup_tag_name": tag.subgroup_tag_name if tag else None,
+        "context_tag_id": mapping.context_tag_id,
+        "has_mapping": True
+    }
+
+# Get all variable mappings for a context
+@app.get("/api/subgroup-tags/{context_tag_id}/variable-mappings")
+async def get_context_variable_mappings(
+    context_tag_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    # Check if context tag exists
+    context_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == context_tag_id)
+    )
+    context_tag = context_result.scalars().first()
+    if not context_tag:
+        raise HTTPException(status_code=404, detail="Context tag not found")
+    
+    # Find all mappings for this context
+    mappings_result = await db.execute(
+        select(models.VariableTagMapping).where(
+            models.VariableTagMapping.context_tag_id == context_tag_id
+        )
+    )
+    mappings = mappings_result.scalars().all()
+    
+    result = []
+    for mapping in mappings:
+        # Get variable info
+        var_result = await db.execute(
+            select(models.FormulaVariable).where(models.FormulaVariable.variable_id == mapping.variable_id)
+        )
+        variable = var_result.scalars().first()
+        
+        # Get tag info
+        tag_result = await db.execute(
+            select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+        )
+        tag = tag_result.scalars().first()
+        
+        result.append({
+            "mapping_id": mapping.mapping_id,
+            "variable_id": mapping.variable_id,
+            "variable_name": variable.variable_name if variable else None,
+            "subgroup_tag_id": mapping.subgroup_tag_id,
+            "subgroup_tag_name": tag.subgroup_tag_name if tag else None,
+            "context_tag_id": context_tag_id
+        })
+    
+    return result
