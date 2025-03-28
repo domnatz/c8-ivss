@@ -54,33 +54,6 @@ export default function AssignSubgroupTagVariable({
     subgroup_tag_name: string | null;
   }>({ subgroup_tag_id: null, subgroup_tag_name: null });
 
-  // Fetch current mapping when the dialog opens
-  useEffect(() => {
-    if (isOpen && variableId) {
-      fetchCurrentMapping();
-    }
-  }, [isOpen, variableId]);
-
-  const fetchCurrentMapping = async () => {
-    if (!variableId) return;
-    
-    try {
-      const response = await fetch(`/api/formula-variables/${variableId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch variable mapping');
-      }
-      
-      const data = await response.json();
-      setCurrentMapping({
-        subgroup_tag_id: data.subgroup_tag_id,
-        subgroup_tag_name: data.subgroup_tag_name
-      });
-      
-    } catch (error) {
-      console.error("Error fetching variable mapping:", error);
-    }
-  };
-
   const handleSubgroupChange = (value: string) => {
     setSelectedSubgroupId(value);
     setSelectedTagId(null); // Reset selected tag when changing subgroup

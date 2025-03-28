@@ -9,6 +9,7 @@ import {
   DocumentCheckIcon,
   TagIcon,
   XCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
 import { exportSubgroupTagDataToExcel } from "@/_services/subgroup-tag-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formulaClientService } from "@/_services/formula-service";
+import { getVariableMappings, removeVariableMapping } from "@/_actions/formula-variable-actions";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -48,6 +50,8 @@ export default function SubgroupTagEdit({
   const dispatch = useAppDispatch();
   const [formulaVariables, setFormulaVariables] = React.useState<Array<{ variable_name: string, variable_id?: number }>>([]);
   const [loadingVariables, setLoadingVariables] = React.useState(false);
+  const [variableMappings, setVariableMappings] = React.useState<Record<number, any>>({});
+  const [loadingMappings, setLoadingMappings] = React.useState(false);
 
   // Get state from Redux
   const childTags = useAppSelector((state) => state.assetState.childTags);
@@ -62,51 +66,6 @@ export default function SubgroupTagEdit({
   const handleDeselectTag = () => {
     dispatch(assetAction.selectSubgroupTag(null));
   };
-
-  // Add to database handler function
-  // const handleAddToDatabase = async () => {
-  //   if (!selectedSubgroupTag) {
-  //     toast.error("Please select a subgroup tag first");
-  //     return;
-  //   }
-
-  //   try {
-  //     const result = await exportSubgroupTagDataToExcel(
-  //       selectedSubgroupTag.subgroup_tag_id
-  //     );
-  //     if (result.success) {
-  //       toast.success("Data exported successfully");
-  //     } else {
-  //       toast.error(result.error || "Failed to export data");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error exporting data:", error);
-  //     toast.error("An unexpected error occurred");
-  //   }
-  // };
-
-  // // Extract the child tags fetching logic into a reusable function
-  // const fetchChildTags = React.useCallback(async () => {
-  //   if (selectedSubgroupTag) {
-  //     dispatch(assetAction.setChildTagsLoading(true));
-  //     try {
-  //       const tags = await getChildTagsByParentId(
-  //         selectedSubgroupTag.subgroup_tag_id
-  //       );
-  //       dispatch(assetAction.setChildTags(tags));
-  //     } catch (error) {
-  //       console.error("Error fetching child tags:", error);
-  //       toast.error("Failed to fetch child tags");
-  //       dispatch(assetAction.setChildTags([]));
-  //     } finally {
-  //       dispatch(assetAction.setChildTagsLoading(false));
-  //     }
-  //   } else {
-  //     dispatch(assetAction.setChildTags([]));
-  //   }
-  // }, [selectedSubgroupTag, dispatch]);
-
-  // Fetch formula variables when selectedFormulaId changes
 
   React.useEffect(() => {
     async function fetchFormulaVariables() {
@@ -129,6 +88,80 @@ export default function SubgroupTagEdit({
 
     fetchFormulaVariables();
   }, [selectedFormulaId]);
+
+  // Fetch variable mappings when selected subgroup tag changes
+  React.useEffect(() => {
+    async function fetchVariableMappings() {
+      if (selectedSubgroupTag) {
+        setLoadingMappings(true);
+        try {
+          const mappings = await getVariableMappings(selectedSubgroupTag.subgroup_tag_id);
+          console.log("Fetched variable mappings:", mappings); // Log the entire response
+          
+          // Convert array to object with variableId as key for easy lookup
+          const mappingsMap = mappings.reduce((acc: Record<number, any>, mapping: any) => {
+            if (mapping.variable_id) {
+              // Log each mapping to inspect its structure
+              console.log("Individual mapping:", mapping);
+              acc[mapping.variable_id] = mapping;
+            }
+            return acc;
+          }, {});
+          setVariableMappings(mappingsMap);
+        } catch (error) {
+          console.error("Error fetching variable mappings:", error);
+          toast.error("Failed to fetch variable mappings");
+        } finally {
+          setLoadingMappings(false);
+        }
+      } else {
+        setVariableMappings({});
+      }
+    }
+
+    fetchVariableMappings();
+  }, [selectedSubgroupTag]);
+
+  // Handle removing a variable mapping
+  const handleRemoveMapping = async (variableId: number) => {
+    if (!selectedSubgroupTag || !variableId) return;
+    
+    try {
+      await removeVariableMapping(selectedSubgroupTag.subgroup_tag_id, variableId);
+      // Update state after successful removal
+      setVariableMappings(prev => {
+        const newMappings = { ...prev };
+        delete newMappings[variableId];
+        return newMappings;
+      });
+      toast.success("Tag assignment removed successfully");
+    } catch (error) {
+      console.error("Error removing variable mapping:", error);
+      toast.error("Failed to remove tag assignment");
+    }
+  };
+
+  // Helper function to safely get the tag name from a mapping
+  const getTagNameFromMapping = (mapping: any): string => {
+    // Log the mapping to see its structure
+    console.log("Getting tag name from mapping:", mapping);
+    
+    if (!mapping) return "Unknown Tag";
+    
+    // Check all possible paths where the tag name might be
+    if (mapping.mapped_tag_name) return mapping.mapped_tag_name;
+    if (mapping.assigned_tag?.subgroup_tag_name) return mapping.assigned_tag.subgroup_tag_name;
+    if (mapping.tag_name) return mapping.tag_name;
+    if (mapping.subgroup_tag_name) return mapping.subgroup_tag_name;
+    if (mapping.name) return mapping.name;
+    
+    // If we get this far, try to stringify the whole object for debugging
+    try {
+      return `Tag: ${JSON.stringify(mapping)}`;
+    } catch {
+      return "Assigned Tag";
+    }
+  };
 
   // Filter child tags based on search query
   const filteredChildTags = childTags.filter((tag) =>
@@ -161,7 +194,6 @@ export default function SubgroupTagEdit({
               </span>
             )}
           </h2>
-          
         </div>
       </div>
 
@@ -202,8 +234,8 @@ export default function SubgroupTagEdit({
             {/* Use the FormulaSection component */}
             <FormulaSection isDisabled={!selectedSubgroupTag} />
 
-            {/* Display formula variables without assignment */}
-            {loadingVariables ? (
+            {/* Display formula variables with mappings */}
+            {loadingVariables || loadingMappings ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
@@ -216,11 +248,26 @@ export default function SubgroupTagEdit({
                       {variable.variable_name}
                     </div>
                     <span>=</span>
-                    <AssignSubgroupTagVariable
-                     buttonText={`Assign tag to ${variable.variable_name}`}
-                     variableName={variable.variable_name} // Pass the variable name
-                     variableId={variable.variable_id} // Add the variable ID
-                     />
+                    {variable.variable_id && variableMappings[variable.variable_id] ? (
+                      <div className="flex items-center gap-2 p-2 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700 flex-grow">
+                        <TagIcon className="w-4 h-4" />
+                        <span className="flex-grow">
+                          {getTagNameFromMapping(variableMappings[variable.variable_id])}
+                        </span>
+                        <button 
+                          onClick={() => handleRemoveMapping(variable.variable_id!)}
+                          className="p-1 hover:bg-blue-100 rounded-full"
+                        >
+                          <XMarkIcon className="w-4 h-4 text-blue-700" />
+                        </button>
+                      </div>
+                    ) : (
+                      <AssignSubgroupTagVariable
+                        buttonText={`Assign tag to ${variable.variable_name}`}
+                        variableName={variable.variable_name}
+                        variableId={variable.variable_id}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

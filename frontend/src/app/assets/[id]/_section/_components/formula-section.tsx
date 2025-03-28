@@ -136,57 +136,51 @@ export default function FormulaSection({
     return uniqueVars;
   };
 
-  // Calculate number of parameters in formula expression
-  const calculateParameterCount = (expression: string): number => {
-    // Use the extracted variables function to find variables with $ prefix
-    const variables = extractVariables(expression);
-    return variables.length;
-  };
 
-        // Handle formula creation
-    const handleCreateFormula = async (e: React.FormEvent) => {
-      e.preventDefault();
-      dispatch(assetAction.setIsCreatingFormula(true));
+      // Handle formula creation
+  const handleCreateFormula = async (e: React.FormEvent) => {
+    e.preventDefault();
+    dispatch(assetAction.setIsCreatingFormula(true));
+    
+    try {
+      // Extract variables with $ prefix
+      const extractedVars = extractVariables(formulaExpression);
       
-      try {
-        // Extract variables with $ prefix
-        const extractedVars = extractVariables(formulaExpression);
+      const formulaData = {
+        formula_name: formulaName,
+        formula_desc: formulaDesc || undefined,  
+        formula_expression: formulaExpression,
+        // Remove num_parameters field - it's no longer in the database model
+        variables: extractedVars.map(varName => ({
+          variable_name: varName
+        }))
+      };
+      
+      console.log("Sending formula data:", formulaData);
+      
+      // Create formula in the database
+      const result = await formulaClientService.submitFormula(formulaData, dispatch);
+      
+      if (result) {
+        // Reset form via Redux
+        dispatch(assetAction.resetFormulaForm());
         
-        const formulaData = {
-          formula_name: formulaName,
-          formula_desc: formulaDesc || undefined,  
-          formula_expression: formulaExpression,
-          // Remove num_parameters field - it's no longer in the database model
-          variables: extractedVars.map(varName => ({
-            variable_name: varName
-          }))
-        };
+        // Close dialog
+        setCreateDialogOpen(false);
         
-        console.log("Sending formula data:", formulaData);
+        // Reload formulas list to include the new formula
+        await formulaClientService.loadFormulas(dispatch);
         
-        // Create formula in the database
-        const result = await formulaClientService.submitFormula(formulaData, dispatch);
-        
-        if (result) {
-          // Reset form via Redux
-          dispatch(assetAction.resetFormulaForm());
-          
-          // Close dialog
-          setCreateDialogOpen(false);
-          
-          // Reload formulas list to include the new formula
-          await formulaClientService.loadFormulas(dispatch);
-          
-          // Show success message
-          toast.success(`Formula "${formulaName}" created successfully!`);
-        }
-      } catch (error) {
-        console.error("Error creating formula:", error);
-        toast.error(error instanceof Error ? error.message : "Failed to create formula");
-      } finally {
-        dispatch(assetAction.setIsCreatingFormula(false));
+        // Show success message
+        toast.success(`Formula "${formulaName}" created successfully!`);
       }
-    };
+    } catch (error) {
+      console.error("Error creating formula:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create formula");
+    } finally {
+      dispatch(assetAction.setIsCreatingFormula(false));
+    }
+  };
 
   return (
     <div className="inline-flex flex-row w-full gap-2 items-center mb-2">
