@@ -26,11 +26,8 @@ import { toast } from "react-toastify";
 import TemplateSelector from "@/app/assets/[id]/_section/_components/template-selection";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import AssignSubgroupTagVariable from "./_components/assign-subgroup_tag-variable";
-import { getChildTagsByParentId } from "@/_services/subgroup-tag-service";
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
-import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
-import { exportSubgroupTagDataToExcel } from "@/_services/subgroup-tag-service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formulaClientService } from "@/_services/formula-service";
 import { getVariableMappings, removeVariableMapping } from "@/_actions/formula-variable-actions";
@@ -73,6 +70,7 @@ export default function SubgroupTagEdit({
         setLoadingVariables(true);
         try {
           const variables = await formulaClientService.getFormulaVariables(selectedFormulaId);
+          console.log('Fetched formula variables:', variables); // Added console log here
           setFormulaVariables(variables);
         } catch (error) {
           console.error("Error fetching formula variables:", error);
@@ -244,7 +242,7 @@ export default function SubgroupTagEdit({
               <div className="flex flex-col gap-2 ">
                 {formulaVariables.map((variable, index) => (
                   <div key={index} className="inline-flex w-full items-center gap-2">
-                    <div className="p-2 text-sm border border-border rounded-md bg-background">
+                    <div className="p-2 text-sm border border-border rounded-md bg-background font-medium w-[100px]">
                       {variable.variable_name}
                     </div>
                     <span>=</span>
@@ -276,7 +274,7 @@ export default function SubgroupTagEdit({
                 No variables found for this formula.
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground mt-4">
+              <div className="flex flex-row text-muted-foreground w-full h-full align-middle items-center justify-center">
                 Select a formula to see its variables.
               </div>
             )}
