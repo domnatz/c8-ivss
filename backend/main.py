@@ -1121,4 +1121,105 @@ async def assign_template_to_subgroup_tag(
         }
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}")   
+        raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}") 
+
+@app.get("/api/templates")
+async def get_all_templates(db: AsyncSession = Depends(get_db)):
+    """Get all templates in the system"""
+    
+    result = await db.execute(select(models.Templates))
+    templates = result.scalars().all()
+    
+    template_list = []
+    for template in templates:
+        # Get formula info
+        formula_result = await db.execute(
+            select(models.Formulas).where(models.Formulas.formula_id == template.formula_id)
+        )
+        formula = formula_result.scalars().first()
+        
+        template_list.append({
+            "template_id": template.template_id,
+            "template_name": template.template_name,
+            "formula_id": template.formula_id,
+            "formula_name": formula.formula_name if formula else None
+        })
+    
+    return template_list
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: int, db: AsyncSession = Depends(get_db)):
+    """Get a template with its formula, variables, and tag mappings"""
+    
+    # Get template
+    template_result = await db.execute(
+        select(models.Templates).where(models.Templates.template_id == template_id)
+    )
+    template = template_result.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Get formula
+    formula_result = await db.execute(
+        select(models.Formulas).where(models.Formulas.formula_id == template.formula_id)
+    )
+    formula = formula_result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Template formula not found")
+    
+    # Get variables
+    variables_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula.formula_id)
+    )
+    variables = variables_result.scalars().all()
+    
+    # Build variables data with their mappings
+    variables_data = []
+    for variable in variables:
+        # Get mappings for this variable
+        mappings_result = await db.execute(
+            select(models.VariableTagMapping).where(
+                models.VariableTagMapping.variable_id == variable.variable_id
+            )
+        )
+        mappings = mappings_result.scalars().all()
+        
+        # Format mappings data
+        mappings_data = []
+        for mapping in mappings:
+            tag_result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+            )
+            tag = tag_result.scalars().first()
+            
+            context_tag_result = await db.execute(
+                select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.context_tag_id)
+            )
+            context_tag = context_tag_result.scalars().first()
+            
+            mappings_data.append({
+                "mapping_id": mapping.mapping_id,
+                "subgroup_tag_id": mapping.subgroup_tag_id,
+                "subgroup_tag_name": tag.subgroup_tag_name if tag else None,
+                "context_tag_id": mapping.context_tag_id,
+                "context_tag_name": context_tag.subgroup_tag_name if context_tag else None
+            })
+        
+        variables_data.append({
+            "variable_id": variable.variable_id,
+            "variable_name": variable.variable_name,
+            "mappings": mappings_data
+        })
+    
+    # Return template with all associated data
+    return {
+        "template_id": template.template_id,
+        "template_name": template.template_name,
+        "formula": {
+            "formula_id": formula.formula_id,
+            "formula_name": formula.formula_name,
+            "formula_desc": formula.formula_desc,
+            "formula_expression": formula.formula_expression
+        },
+        "variables": variables_data
+    }  
