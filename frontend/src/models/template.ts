@@ -6,3 +6,8 @@ export interface Template {
   asset_name: string;
   subgroups?: Subgroup[];
 }
+
+export interface SaveTemplateParams {
+  template_name: string;
+  formula_id: number;
+}

@@ -984,7 +984,6 @@ class TemplateCreate(BaseModel):
     template_name: str
     formula_id: int  # Source formula to copy from
 
-# Create a new template with a copy of the formula and its variables
 @app.post("/api/templates")
 async def create_template(template_data: TemplateCreate, db: AsyncSession = Depends(get_db)):
     # First verify the source formula exists
@@ -996,73 +995,75 @@ async def create_template(template_data: TemplateCreate, db: AsyncSession = Depe
         raise HTTPException(status_code=404, detail="Source formula not found")
     
     try:
-        # Begin transaction to ensure atomicity
-        async with db.begin():
-            # 1. Create a new formula as a copy of the source
-            new_formula = models.Formulas(
-                formula_name=f"{source_formula.formula_name} (from template {template_data.template_name})",
-                formula_desc=source_formula.formula_desc,
-                formula_expression=source_formula.formula_expression
-            )
-            db.add(new_formula)
-            await db.flush()  # Get the new formula ID
-            
-            # 2. Create the template linked to the new formula
-            new_template = models.Templates(
-                template_name=template_data.template_name,
-                formula_id=new_formula.formula_id
-            )
-            db.add(new_template)
-            await db.flush()  # Get the new template ID
-            
-            # 3. Copy all variables from the source formula
-            variable_mapping = {}  # Maps original variable IDs to new variable IDs
-            source_variables_result = await db.execute(
-                select(models.FormulaVariable).where(
-                    models.FormulaVariable.formula_id == template_data.formula_id
-                )
-            )
-            source_variables = source_variables_result.scalars().all()
-            
-            for source_var in source_variables:
-                new_var = models.FormulaVariable(
-                    formula_id=new_formula.formula_id,
-                    variable_name=source_var.variable_name
-                )
-                db.add(new_var)
-                await db.flush()
-                variable_mapping[source_var.variable_id] = new_var.variable_id
-            
-            # 4. Copy variable tag mappings for the new variables
-            for source_var_id, new_var_id in variable_mapping.items():
-                # Get all mappings for this variable
-                mappings_result = await db.execute(
-                    select(models.VariableTagMapping).where(
-                        models.VariableTagMapping.variable_id == source_var_id
-                    )
-                )
-                mappings = mappings_result.scalars().all()
-                
-                for mapping in mappings:
-                    # Create a copy of the mapping for the new variable
-                    new_mapping = models.VariableTagMapping(
-                        variable_id=new_var_id,
-                        subgroup_tag_id=mapping.subgroup_tag_id,
-                        context_tag_id=mapping.context_tag_id
-                    )
-                    db.add(new_mapping)
+        # Remove the explicit transaction block since it's likely already in one
+        # Just use the existing transaction
         
-        # After successful transaction completion, return the details
+        # 1. Create a new formula as a copy of the source
+        new_formula = models.Formulas(
+            formula_name=f"{source_formula.formula_name} (from template {template_data.template_name})",
+            formula_desc=source_formula.formula_desc,
+            formula_expression=source_formula.formula_expression
+        )
+        db.add(new_formula)
+        await db.flush()
+        
+        # 2. Create the template linked to the new formula
+        new_template = models.Templates(
+            template_name=template_data.template_name,
+            formula_id=new_formula.formula_id
+        )
+        db.add(new_template)
+        await db.flush()
+        
+        # 3. Copy all variables from the source formula
+        variable_mapping = {}
+        source_variables_result = await db.execute(
+            select(models.FormulaVariable).where(
+                models.FormulaVariable.formula_id == template_data.formula_id
+            )
+        )
+        source_variables = source_variables_result.scalars().all()
+        
+        for source_var in source_variables:
+            new_var = models.FormulaVariable(
+                formula_id=new_formula.formula_id,
+                variable_name=source_var.variable_name
+            )
+            db.add(new_var)
+            await db.flush()
+            variable_mapping[source_var.variable_id] = new_var.variable_id
+        
+        # 4. Copy variable tag mappings
+        for source_var_id, new_var_id in variable_mapping.items():
+            mappings_result = await db.execute(
+                select(models.VariableTagMapping).where(
+                    models.VariableTagMapping.variable_id == source_var_id
+                )
+            )
+            mappings = mappings_result.scalars().all()
+            
+            for mapping in mappings:
+                new_mapping = models.VariableTagMapping(
+                    variable_id=new_var_id,
+                    subgroup_tag_id=mapping.subgroup_tag_id,
+                    context_tag_id=mapping.context_tag_id
+                )
+                db.add(new_mapping)
+        
+        # Commit the transaction
+        await db.commit()
+        
         return {
             "template_id": new_template.template_id,
             "template_name": new_template.template_name,
             "formula_id": new_formula.formula_id,
-            "message": "Template created with copied formula, variables, and tag mappings"
+            "message": "Template created successfully"
         }
+        
     except Exception as e:
-        # Transaction will automatically roll back on exception
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create template: {str(e)}")
-    
+        
 class AssignTemplateRequest(BaseModel):
     template_id: int
     subgroup_tag_id: int

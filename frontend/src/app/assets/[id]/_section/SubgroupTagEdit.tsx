@@ -30,7 +30,10 @@ import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formulaClientService } from "@/_services/formula-service";
-import { getVariableMappings, removeVariableMapping } from "@/_actions/formula-variable-actions";
+import {
+  getVariableMappings,
+  removeVariableMapping,
+} from "@/_actions/formula-variable-actions";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -45,9 +48,13 @@ export default function SubgroupTagEdit({
   );
   const params = useParams();
   const dispatch = useAppDispatch();
-  const [formulaVariables, setFormulaVariables] = React.useState<Array<{ variable_name: string, variable_id?: number }>>([]);
+  const [formulaVariables, setFormulaVariables] = React.useState<
+    Array<{ variable_name: string; variable_id?: number }>
+  >([]);
   const [loadingVariables, setLoadingVariables] = React.useState(false);
-  const [variableMappings, setVariableMappings] = React.useState<Record<number, any>>({});
+  const [variableMappings, setVariableMappings] = React.useState<
+    Record<number, any>
+  >({});
   const [loadingMappings, setLoadingMappings] = React.useState(false);
 
   // Get state from Redux
@@ -57,7 +64,9 @@ export default function SubgroupTagEdit({
   );
 
   // Get selectedFormulaId from Redux
-  const selectedFormulaId = useAppSelector((state) => state.assetState.selectedFormulaId);
+  const selectedFormulaId = useAppSelector(
+    (state) => state.assetState.selectedFormulaId
+  );
 
   // Handle tag deselection
   const handleDeselectTag = () => {
@@ -69,8 +78,10 @@ export default function SubgroupTagEdit({
       if (selectedFormulaId) {
         setLoadingVariables(true);
         try {
-          const variables = await formulaClientService.getFormulaVariables(selectedFormulaId);
-          console.log('Fetched formula variables:', variables); // Added console log here
+          const variables = await formulaClientService.getFormulaVariables(
+            selectedFormulaId
+          );
+          console.log("Fetched formula variables:", variables); // Added console log here
           setFormulaVariables(variables);
         } catch (error) {
           console.error("Error fetching formula variables:", error);
@@ -93,18 +104,23 @@ export default function SubgroupTagEdit({
       if (selectedSubgroupTag) {
         setLoadingMappings(true);
         try {
-          const mappings = await getVariableMappings(selectedSubgroupTag.subgroup_tag_id);
+          const mappings = await getVariableMappings(
+            selectedSubgroupTag.subgroup_tag_id
+          );
           console.log("Fetched variable mappings:", mappings); // Log the entire response
-          
+
           // Convert array to object with variableId as key for easy lookup
-          const mappingsMap = mappings.reduce((acc: Record<number, any>, mapping: any) => {
-            if (mapping.variable_id) {
-              // Log each mapping to inspect its structure
-              console.log("Individual mapping:", mapping);
-              acc[mapping.variable_id] = mapping;
-            }
-            return acc;
-          }, {});
+          const mappingsMap = mappings.reduce(
+            (acc: Record<number, any>, mapping: any) => {
+              if (mapping.variable_id) {
+                // Log each mapping to inspect its structure
+                console.log("Individual mapping:", mapping);
+                acc[mapping.variable_id] = mapping;
+              }
+              return acc;
+            },
+            {}
+          );
           setVariableMappings(mappingsMap);
         } catch (error) {
           console.error("Error fetching variable mappings:", error);
@@ -123,11 +139,14 @@ export default function SubgroupTagEdit({
   // Handle removing a variable mapping
   const handleRemoveMapping = async (variableId: number) => {
     if (!selectedSubgroupTag || !variableId) return;
-    
+
     try {
-      await removeVariableMapping(selectedSubgroupTag.subgroup_tag_id, variableId);
+      await removeVariableMapping(
+        selectedSubgroupTag.subgroup_tag_id,
+        variableId
+      );
       // Update state after successful removal
-      setVariableMappings(prev => {
+      setVariableMappings((prev) => {
         const newMappings = { ...prev };
         delete newMappings[variableId];
         return newMappings;
@@ -143,16 +162,17 @@ export default function SubgroupTagEdit({
   const getTagNameFromMapping = (mapping: any): string => {
     // Log the mapping to see its structure
     console.log("Getting tag name from mapping:", mapping);
-    
+
     if (!mapping) return "Unknown Tag";
-    
+
     // Check all possible paths where the tag name might be
     if (mapping.mapped_tag_name) return mapping.mapped_tag_name;
-    if (mapping.assigned_tag?.subgroup_tag_name) return mapping.assigned_tag.subgroup_tag_name;
+    if (mapping.assigned_tag?.subgroup_tag_name)
+      return mapping.assigned_tag.subgroup_tag_name;
     if (mapping.tag_name) return mapping.tag_name;
     if (mapping.subgroup_tag_name) return mapping.subgroup_tag_name;
     if (mapping.name) return mapping.name;
-    
+
     // If we get this far, try to stringify the whole object for debugging
     try {
       return `Tag: ${JSON.stringify(mapping)}`;
@@ -241,19 +261,27 @@ export default function SubgroupTagEdit({
             ) : formulaVariables.length > 0 ? (
               <div className="flex flex-col gap-2 ">
                 {formulaVariables.map((variable, index) => (
-                  <div key={index} className="inline-flex w-full items-center gap-2">
+                  <div
+                    key={index}
+                    className="inline-flex w-full items-center gap-2"
+                  >
                     <div className="p-2 text-sm border border-border rounded-md bg-background font-medium w-[100px]">
                       {variable.variable_name}
                     </div>
                     <span>=</span>
-                    {variable.variable_id && variableMappings[variable.variable_id] ? (
+                    {variable.variable_id &&
+                    variableMappings[variable.variable_id] ? (
                       <div className="flex items-center gap-2 p-2 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700 flex-grow">
                         <TagIcon className="w-4 h-4" />
                         <span className="flex-grow">
-                          {getTagNameFromMapping(variableMappings[variable.variable_id])}
+                          {getTagNameFromMapping(
+                            variableMappings[variable.variable_id]
+                          )}
                         </span>
-                        <button 
-                          onClick={() => handleRemoveMapping(variable.variable_id!)}
+                        <button
+                          onClick={() =>
+                            handleRemoveMapping(variable.variable_id!)
+                          }
                           className="p-1 hover:bg-blue-100 rounded-full"
                         >
                           <XMarkIcon className="w-4 h-4 text-blue-700" />
