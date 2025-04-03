@@ -1,17 +1,17 @@
 import * as templateService from "@/_services/template-service";
-import { Template, SaveTemplateParams } from "@/models/template";
+import { Template } from "@/models/template";
 
 /**
  * Save a template and return a simplified result
  */
-export const saveTemplate = async (params: SaveTemplateParams): Promise<{ success: boolean; message: string }> => {
+export const saveTemplate = async (params: Template): Promise<{ success: boolean; message: string }> => {
   try {
     console.log("Action: saveTemplate", params);
     const template = await templateService.saveTemplate(params);
     console.log("Template saved:", template);
     
     // Use the template_name from the params as fallback if asset_name is undefined
-    const templateName = template.asset_name || params.template_name;
+    const templateName = template.template_name;
     
     return {
       success: true,

@@ -2,21 +2,19 @@
  * Template Service
  * Handles all API calls related to templates
  */
-import { SaveTemplateParams, Template } from "@/models/template";
+import { Template } from "@/models/template";
 
 // Base API URL
 const API_URL = "http://localhost:8000/api";
-
-
 
 /**
  * Save a new template
  */
 export const saveTemplate = async (
-  params: SaveTemplateParams
+  params: Template
 ): Promise<Template> => {
   console.log("API call: saveTemplate", params);
-  
+
   const response = await fetch(`${API_URL}/templates`, {
     method: "POST",
     headers: {
@@ -40,12 +38,12 @@ export const saveTemplate = async (
  */
 export const getTemplates = async (): Promise<Template[]> => {
   const response = await fetch(`${API_URL}/templates`);
-  
+
   const data = await response.json();
-  
+
   if (!response.ok) {
     throw new Error(data.detail || "Failed to retrieve templates");
   }
-  
+
   return data;
 };

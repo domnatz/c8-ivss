@@ -1,6 +1,7 @@
 import { Asset } from "@/models/asset";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { Formula } from "@/models/formula";
+import { Template } from "@/models/template";
 
 export const initialState: {
   asset_id: number;
@@ -25,6 +26,9 @@ export const initialState: {
   formulaExpression: string;
   formulaDesc: string;
   isCreatingFormula: boolean;
+  // Template related states
+  templates: Template[];
+  templatesLoading: boolean;
 } = {
   asset_id: 0,
   asset_type: "",
@@ -48,4 +52,7 @@ export const initialState: {
   formulaExpression: "",
   formulaDesc: "",
   isCreatingFormula: false,
+  // Initialize template related states
+  templates: [],
+  templatesLoading: false,
 };

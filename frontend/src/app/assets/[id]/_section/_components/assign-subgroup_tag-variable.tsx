@@ -155,7 +155,7 @@ export default function AssignSubgroupTagVariable({
   };
 
   return (
-    <div>
+    <div className="w-full">
       <Dialog open={isOpen} onOpenChange={(open) => {
         if (selectedSubgroupTag || !open) {
           setIsOpen(open);

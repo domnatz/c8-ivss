@@ -4,6 +4,7 @@ import { Asset } from "@/models/asset";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { Formula } from "@/models/formula";
+import { Template } from "@/models/template";
 
 export const assetSlice = createSlice({
   name: "assetSlice",
@@ -203,6 +204,29 @@ export const assetSlice = createSlice({
         formulaExpression: "",
         formulaDesc: "",
         isCreatingFormula: false,
+      };
+    },
+
+    // Template reducers
+    setTemplates: (state, action: PayloadAction<Template[]>) => {
+      return {
+        ...state,
+        templates: action.payload,
+      };
+    },
+    
+    setTemplatesLoading: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        templatesLoading: action.payload,
+      };
+    },
+    
+    // Add a new template to the list
+    addTemplate: (state, action: PayloadAction<Template>) => {
+      return {
+        ...state,
+        templates: [action.payload, ...state.templates],
       };
     },
   },
