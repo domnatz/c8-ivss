@@ -14,12 +14,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Toggle } from "@/components/ui/toggle";
 import {
   ChevronUpDownIcon,
   BookmarkIcon,
   CheckIcon,
-  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,13 +25,13 @@ import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import { Button } from "@/components/ui/button";
 import { SearchForm } from "@/components/user/search-form";
 import { saveTemplate, getTemplates } from "@/_actions/template-actions";
-import { Template } from "@/models/template";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assetAction } from "../../_redux/asset-slice";
+import { toast } from "react-toastify";
 
 export default function TemplateSelector() {
   const dispatch = useAppDispatch();
-  
+
   // Get states from Redux
   const subgroupTag = useAppSelector(
     (state) => state.assetState.selectedSubgroupTag
@@ -41,20 +39,14 @@ export default function TemplateSelector() {
   const selectedformulaId = useAppSelector(
     (state) => state.assetState.selectedFormulaId
   );
-  const templates = useAppSelector(
-    (state) => state.assetState.templates
-  );
+  const templates = useAppSelector((state) => state.assetState.templates);
   const isLoading = useAppSelector(
     (state) => state.assetState.templatesLoading
   );
 
-  // Local UI states 
+  // Local UI states
   const [templateName, setTemplateName] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
-  const [saveStatus, setSaveStatus] = React.useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -93,18 +85,12 @@ export default function TemplateSelector() {
   // Handle template save
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      setSaveStatus({
-        success: false,
-        message: "Please enter a template name",
-      });
+      toast.error("Please enter a template name");
       return;
     }
 
     if (!selectedformulaId) {
-      setSaveStatus({
-        success: false,
-        message: "No formula selected to save as template",
-      });
+      toast.error("No formula selected to save as template");
       return;
     }
 
@@ -116,7 +102,6 @@ export default function TemplateSelector() {
     );
 
     setIsSaving(true);
-    setSaveStatus(null);
 
     try {
       const result = await saveTemplate({
@@ -126,25 +111,23 @@ export default function TemplateSelector() {
       });
 
       console.log("Save result:", result);
-      setSaveStatus(result);
 
       if (result.success) {
+        toast.success(result.message || "Template saved successfully!");
         console.log("🎉 Template saved successfully!");
         setTemplateName("");
 
         // Close dialog after success
         setTimeout(() => {
           setSaveDialogOpen(false);
-          setSaveStatus(null);
           console.log("🔒 Save dialog closed");
         }, 2000);
+      } else {
+        toast.error(result.message || "Failed to save template");
       }
     } catch (error) {
       console.error("Save error:", error);
-      setSaveStatus({
-        success: false,
-        message: "An unexpected error occurred",
-      });
+      toast.error("An unexpected error occurred");
     } finally {
       setIsSaving(false);
       console.log("⏹️ Template save process completed");
@@ -155,7 +138,11 @@ export default function TemplateSelector() {
   const isDisabled = !subgroupTag;
 
   return (
-    <div className={`flex flex-row justify-between w-full gap-2 ${isDisabled ? "opacity-50" : ""}`}>
+    <div
+      className={`flex flex-row justify-between w-full gap-2 ${
+        isDisabled ? "opacity-50" : ""
+      }`}
+    >
       <Select disabled={isDisabled}>
         <SelectTrigger className="w-full border">
           <SelectValue placeholder="Select Template" />
@@ -163,8 +150,8 @@ export default function TemplateSelector() {
         <SelectContent>
           {/* Map templates here maximum of 10 show newest */}
           {templates.slice(0, 10).map((template) => (
-            <SelectItem 
-              key={template.template_id} 
+            <SelectItem
+              key={template.template_id}
               value={String(template.template_id)}
             >
               {template.template_name}
@@ -265,23 +252,6 @@ export default function TemplateSelector() {
                 onChange={(e) => setTemplateName(e.target.value)}
               />
             </div>
-
-            {saveStatus && (
-              <div
-                className={`mt-3 p-2 rounded-md ${
-                  saveStatus.success
-                    ? "bg-green-50 text-green-800 border border-green-200"
-                    : "bg-red-50 text-red-800 border border-red-200"
-                } flex items-center gap-2`}
-              >
-                {saveStatus.success ? (
-                  <CheckIcon className="h-5 w-5" />
-                ) : (
-                  <ExclamationCircleIcon className="h-5 w-5" />
-                )}
-                <span>{saveStatus.message}</span>
-              </div>
-            )}
 
             <Button
               onClick={handleSaveTemplate}
