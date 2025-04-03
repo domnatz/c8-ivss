@@ -1224,3 +1224,141 @@ async def get_template(template_id: int, db: AsyncSession = Depends(get_db)):
         },
         "variables": variables_data
     }  
+
+@app.post("/api/subgroup-tags/assign-template")
+async def assign_template_to_subgroup_tag(
+    assignment: AssignTemplateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify template exists
+    template_result = await db.execute(
+        select(models.Templates).where(models.Templates.template_id == assignment.template_id)
+    )
+    template = template_result.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Verify subgroup tag exists
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == assignment.subgroup_tag_id)
+    )
+    subgroup_tag = tag_result.scalars().first()
+    if not subgroup_tag:
+        raise HTTPException(status_code=404, detail="Subgroup tag not found")
+    
+    try:
+        # Get subgroup ID from tag
+        subgroup_id = subgroup_tag.subgroup_id
+        
+        # Update the subgroup tag to use the formula from the template
+        subgroup_tag.formula_id = template.formula_id
+        await db.flush()
+        
+        # Create SubgroupTemplate association if it doesn't exist
+        existing_assignment = await db.execute(
+            select(models.SubgroupTemplate).where(
+                models.SubgroupTemplate.subgroup_id == subgroup_id,
+                models.SubgroupTemplate.template_id == assignment.template_id
+            )
+        )
+        if not existing_assignment.scalars().first() and subgroup_id is not None:
+            new_assignment = models.SubgroupTemplate(
+                subgroup_id=subgroup_id,
+                template_id=assignment.template_id
+            )
+            db.add(new_assignment)
+            await db.flush()
+        
+        # Find source subgroup tags that use this formula as a template
+        # These are tags that have this formula assigned
+        source_tags_result = await db.execute(
+            select(models.SubgroupTag).where(
+                models.SubgroupTag.formula_id == template.formula_id
+            )
+        )
+        source_tags = source_tags_result.scalars().all()
+        
+        # Map of old tag ID to new tag ID to maintain relationships
+        tag_id_mapping = {}
+        
+        # First pass: Create all top-level children
+        for source_tag in source_tags:
+            # Skip if this is the same tag we're updating or a main parent tag
+            if source_tag.subgroup_tag_id == assignment.subgroup_tag_id or source_tag.parent_subgroup_tag_id is None:
+                continue
+                
+            # If this is a direct child of an original template tag
+            if source_tag.parent_subgroup_tag_id not in tag_id_mapping:
+                # Create new tag as child of the target tag
+                new_child_tag = models.SubgroupTag(
+                    subgroup_id=None,  # Child tags don't have direct subgroup association
+                    tag_id=source_tag.tag_id,
+                    subgroup_tag_name=source_tag.subgroup_tag_name,
+                    parent_subgroup_tag_id=assignment.subgroup_tag_id,  # Make it a child of our target tag
+                    formula_id=source_tag.formula_id  # Preserve any formula assignment
+                )
+                db.add(new_child_tag)
+                await db.flush()
+                
+                # Add to mapping
+                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
+        
+        # Second pass: Handle nested children (children of children)
+        for source_tag in source_tags:
+            # If this tag's parent is one we've already copied
+            if (source_tag.parent_subgroup_tag_id in tag_id_mapping and 
+                source_tag.subgroup_tag_id not in tag_id_mapping):
+                
+                # Get the new parent tag ID
+                new_parent_id = tag_id_mapping[source_tag.parent_subgroup_tag_id]
+                
+                # Create new tag as child of the new parent
+                new_child_tag = models.SubgroupTag(
+                    subgroup_id=None,
+                    tag_id=source_tag.tag_id,
+                    subgroup_tag_name=source_tag.subgroup_tag_name,
+                    parent_subgroup_tag_id=new_parent_id,
+                    formula_id=source_tag.formula_id
+                )
+                db.add(new_child_tag)
+                await db.flush()
+                
+                # Add to mapping
+                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
+        
+        # Copy variable mappings for these tags
+        for old_tag_id, new_tag_id in tag_id_mapping.items():
+            # Find variable mappings where this tag is used
+            mappings_result = await db.execute(
+                select(models.VariableTagMapping).where(
+                    (models.VariableTagMapping.context_tag_id == old_tag_id) |
+                    (models.VariableTagMapping.subgroup_tag_id == old_tag_id)
+                )
+            )
+            mappings = mappings_result.scalars().all()
+            
+            for mapping in mappings:
+                # Determine the correct context and target tags for the new mapping
+                new_context_tag_id = tag_id_mapping.get(mapping.context_tag_id, mapping.context_tag_id)
+                new_subgroup_tag_id = tag_id_mapping.get(mapping.subgroup_tag_id, mapping.subgroup_tag_id)
+                
+                # Create new mapping using the new tag IDs
+                new_mapping = models.VariableTagMapping(
+                    variable_id=mapping.variable_id,
+                    subgroup_tag_id=new_subgroup_tag_id,
+                    context_tag_id=new_context_tag_id
+                )
+                db.add(new_mapping)
+        
+        await db.commit()
+        
+        return {
+            "message": "Template assigned to subgroup tag successfully with tag structure",
+            "template_id": assignment.template_id,
+            "subgroup_tag_id": assignment.subgroup_tag_id,
+            "formula_id": template.formula_id,
+            "tags_created": len(tag_id_mapping)
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}")
