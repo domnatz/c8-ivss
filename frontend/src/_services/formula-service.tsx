@@ -48,7 +48,6 @@ export const formulaService = {
     }
     return response.json();
   },
-
   getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
     return getFormulaVariables(formulaId);
   },
@@ -57,6 +56,7 @@ export const formulaService = {
   getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
     return getFormulaVariablesWithMappings(formulaId, contextTagId);
   },
+  
 };
 
 // New client-side functions for component integration
