@@ -66,3 +66,24 @@ export async function getFormulaVariables(formulaId: number): Promise<Array<{ va
   }
   return response.json();
 }
+
+export const getFormulaVariablesWithMappings = async (
+  formulaId: number,
+  contextTagId: number
+): Promise<any[]> => {
+  try {
+    const response = await fetch(
+      `http://localhost:8000/api/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to fetch formula variables with mappings");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching formula variables with mappings:", error);
+    throw error;
+  }
+};

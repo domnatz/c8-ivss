@@ -47,3 +47,30 @@ export const getTemplates = async (): Promise<Template[]> => {
 
   return data;
 };
+
+export const assignTemplateToSubgroupTag = async (
+  templateId: number,
+  subgroupTagId: number
+): Promise<any> => {
+  console.log(`API call: assignTemplateToSubgroupTag - Template ID: ${templateId}, Tag ID: ${subgroupTagId}`);
+
+  const response = await fetch(`${API_URL}/subgroup-tags/assign-template`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      template_id: templateId,
+      subgroup_tag_id: subgroupTagId,
+    }),
+  });
+
+  const data = await response.json();
+  console.log("API response:", data);
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to assign template");
+  }
+
+  return data;
+};

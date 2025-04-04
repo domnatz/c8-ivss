@@ -1126,7 +1126,7 @@ async def assign_template_to_subgroup_tag(
 
 @app.get("/api/templates")
 async def get_all_templates(db: AsyncSession = Depends(get_db)):
-    """Get all templates in the system"""
+    """Get all templates in the system with their variables and mappings"""
     
     result = await db.execute(select(models.Templates))
     templates = result.scalars().all()
@@ -1139,11 +1139,56 @@ async def get_all_templates(db: AsyncSession = Depends(get_db)):
         )
         formula = formula_result.scalars().first()
         
+        # Get variables for this formula
+        variables_data = []
+        if formula:
+            variables_result = await db.execute(
+                select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula.formula_id)
+            )
+            variables = variables_result.scalars().all()
+            
+            # Get mappings for each variable
+            for variable in variables:
+                mappings_result = await db.execute(
+                    select(models.VariableTagMapping).where(
+                        models.VariableTagMapping.variable_id == variable.variable_id
+                    )
+                )
+                mappings = mappings_result.scalars().all()
+                
+                # Format mappings data
+                mappings_data = []
+                for mapping in mappings:
+                    tag_result = await db.execute(
+                        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id)
+                    )
+                    tag = tag_result.scalars().first()
+                    
+                    context_tag_result = await db.execute(
+                        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == mapping.context_tag_id)
+                    )
+                    context_tag = context_tag_result.scalars().first()
+                    
+                    mappings_data.append({
+                        "mapping_id": mapping.mapping_id,
+                        "subgroup_tag_id": mapping.subgroup_tag_id,
+                        "subgroup_tag_name": tag.subgroup_tag_name if tag else None,
+                        "context_tag_id": mapping.context_tag_id,
+                        "context_tag_name": context_tag.subgroup_tag_name if context_tag else None
+                    })
+                
+                variables_data.append({
+                    "variable_id": variable.variable_id,
+                    "variable_name": variable.variable_name,
+                    "mappings": mappings_data
+                })
+        
         template_list.append({
             "template_id": template.template_id,
             "template_name": template.template_name,
             "formula_id": template.formula_id,
-            "formula_name": formula.formula_name if formula else None
+            "formula_name": formula.formula_name if formula else None,
+            "variables": variables_data
         })
     
     return template_list
@@ -1269,95 +1314,83 @@ async def assign_template_to_subgroup_tag(
             db.add(new_assignment)
             await db.flush()
         
-        # Find source subgroup tags that use this formula as a template
-        # These are tags that have this formula assigned
-        source_tags_result = await db.execute(
-            select(models.SubgroupTag).where(
-                models.SubgroupTag.formula_id == template.formula_id
+        # Find all variables for the template's formula
+        variables_result = await db.execute(
+            select(models.FormulaVariable).where(
+                models.FormulaVariable.formula_id == template.formula_id
             )
         )
-        source_tags = source_tags_result.scalars().all()
+        formula_variables = variables_result.scalars().all()
         
-        # Map of old tag ID to new tag ID to maintain relationships
-        tag_id_mapping = {}
+        # Track created/updated mappings to include in response
+        created_mappings = []
         
-        # First pass: Create all top-level children
-        for source_tag in source_tags:
-            # Skip if this is the same tag we're updating or a main parent tag
-            if source_tag.subgroup_tag_id == assignment.subgroup_tag_id or source_tag.parent_subgroup_tag_id is None:
-                continue
-                
-            # If this is a direct child of an original template tag
-            if source_tag.parent_subgroup_tag_id not in tag_id_mapping:
-                # Create new tag as child of the target tag
-                new_child_tag = models.SubgroupTag(
-                    subgroup_id=None,  # Child tags don't have direct subgroup association
-                    tag_id=source_tag.tag_id,
-                    subgroup_tag_name=source_tag.subgroup_tag_name,
-                    parent_subgroup_tag_id=assignment.subgroup_tag_id,  # Make it a child of our target tag
-                    formula_id=source_tag.formula_id  # Preserve any formula assignment
-                )
-                db.add(new_child_tag)
-                await db.flush()
-                
-                # Add to mapping
-                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
-        
-        # Second pass: Handle nested children (children of children)
-        for source_tag in source_tags:
-            # If this tag's parent is one we've already copied
-            if (source_tag.parent_subgroup_tag_id in tag_id_mapping and 
-                source_tag.subgroup_tag_id not in tag_id_mapping):
-                
-                # Get the new parent tag ID
-                new_parent_id = tag_id_mapping[source_tag.parent_subgroup_tag_id]
-                
-                # Create new tag as child of the new parent
-                new_child_tag = models.SubgroupTag(
-                    subgroup_id=None,
-                    tag_id=source_tag.tag_id,
-                    subgroup_tag_name=source_tag.subgroup_tag_name,
-                    parent_subgroup_tag_id=new_parent_id,
-                    formula_id=source_tag.formula_id
-                )
-                db.add(new_child_tag)
-                await db.flush()
-                
-                # Add to mapping
-                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
-        
-        # Copy variable mappings for these tags
-        for old_tag_id, new_tag_id in tag_id_mapping.items():
-            # Find variable mappings where this tag is used
+        # For each variable, get all of its mappings
+        for variable in formula_variables:
             mappings_result = await db.execute(
                 select(models.VariableTagMapping).where(
-                    (models.VariableTagMapping.context_tag_id == old_tag_id) |
-                    (models.VariableTagMapping.subgroup_tag_id == old_tag_id)
+                    models.VariableTagMapping.variable_id == variable.variable_id
                 )
             )
-            mappings = mappings_result.scalars().all()
+            variable_mappings = mappings_result.scalars().all()
             
-            for mapping in mappings:
-                # Determine the correct context and target tags for the new mapping
-                new_context_tag_id = tag_id_mapping.get(mapping.context_tag_id, mapping.context_tag_id)
-                new_subgroup_tag_id = tag_id_mapping.get(mapping.subgroup_tag_id, mapping.subgroup_tag_id)
-                
-                # Create new mapping using the new tag IDs
-                new_mapping = models.VariableTagMapping(
-                    variable_id=mapping.variable_id,
-                    subgroup_tag_id=new_subgroup_tag_id,
-                    context_tag_id=new_context_tag_id
+            # Create a new mapping for each variable in the context of the target tag
+            for mapping in variable_mappings:
+                # Check if a mapping for this variable and context already exists
+                existing_mapping_result = await db.execute(
+                    select(models.VariableTagMapping).where(
+                        models.VariableTagMapping.variable_id == variable.variable_id,
+                        models.VariableTagMapping.context_tag_id == assignment.subgroup_tag_id
+                    )
                 )
-                db.add(new_mapping)
+                existing_mapping = existing_mapping_result.scalars().first()
+                
+                # Get tag info for response
+                tag_info_result = await db.execute(
+                    select(models.SubgroupTag).where(
+                        models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id
+                    )
+                )
+                tag_info = tag_info_result.scalars().first()
+                
+                if existing_mapping:
+                    # Update existing mapping
+                    existing_mapping.subgroup_tag_id = mapping.subgroup_tag_id
+                    created_mappings.append({
+                        "mapping_id": existing_mapping.mapping_id,
+                        "variable_id": variable.variable_id,
+                        "variable_name": variable.variable_name,
+                        "subgroup_tag_id": mapping.subgroup_tag_id,
+                        "subgroup_tag_name": tag_info.subgroup_tag_name if tag_info else "Unknown",
+                        "context_tag_id": assignment.subgroup_tag_id
+                    })
+                else:
+                    # Create new mapping in the new context
+                    new_mapping = models.VariableTagMapping(
+                        variable_id=variable.variable_id,
+                        subgroup_tag_id=mapping.subgroup_tag_id,
+                        context_tag_id=assignment.subgroup_tag_id  # Use the target tag as context
+                    )
+                    db.add(new_mapping)
+                    await db.flush()  # Get the new mapping ID
+                    created_mappings.append({
+                        "mapping_id": new_mapping.mapping_id,
+                        "variable_id": variable.variable_id,
+                        "variable_name": variable.variable_name,
+                        "subgroup_tag_id": mapping.subgroup_tag_id,
+                        "subgroup_tag_name": tag_info.subgroup_tag_name if tag_info else "Unknown",
+                        "context_tag_id": assignment.subgroup_tag_id
+                    })
         
         await db.commit()
         
+        # Return with mappings included
         return {
-            "message": "Template assigned to subgroup tag successfully with tag structure",
+            "message": "Template assigned to subgroup tag successfully with variable mappings",
             "template_id": assignment.template_id,
             "subgroup_tag_id": assignment.subgroup_tag_id,
             "formula_id": template.formula_id,
-            "tags_created": len(tag_id_mapping)
+            "mappings": created_mappings  # Include the mappings in the response
         }
     except Exception as e:
         await db.rollback()

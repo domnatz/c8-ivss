@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { saveTemplate, getTemplates, assignTemplate } from "@/_actions/template-actions";
 import {
   ChevronUpDownIcon,
   BookmarkIcon,
@@ -24,7 +25,6 @@ import { Label } from "@/components/ui/label";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
 import { Button } from "@/components/ui/button";
 import { SearchForm } from "@/components/user/search-form";
-import { saveTemplate, getTemplates } from "@/_actions/template-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assetAction } from "../../_redux/asset-slice";
 import { toast } from "react-toastify";
@@ -76,12 +76,38 @@ export default function TemplateSelector() {
     );
   }, [templates, searchQuery]);
 
-  // Handle template selection
-  const handleSelectTemplate = (templateId: number) => {
-    // TODO: Implement template selection logic
-    console.log("Template selected:", templateId);
+  const handleSelectTemplate = async (templateId: number) => {
+    // Check if a subgroup tag is selected
+    if (!subgroupTag?.subgroup_tag_id) {
+      toast.error("Please select a subgroup tag first");
+      return;
+    }
+  
+    try {
+      // Show loading state
+      toast.info("Applying template...");
+      
+      // Call the action to assign the template
+      const result = await assignTemplate(templateId, subgroupTag.subgroup_tag_id);
+      
+      if (result.success) {
+        toast.success(result.message);
+        
+        // Update the selected formula in Redux state if formula_id is returned
+        if (result.formula_id) {
+          dispatch(assetAction.setSelectedFormulaId(result.formula_id));
+        }
+        
+        // Reset search query
+        setSearchQuery("");
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Failed to apply template:", error);
+      toast.error("An unexpected error occurred");
+    }
   };
-
   // Handle template save
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
@@ -143,12 +169,14 @@ export default function TemplateSelector() {
         isDisabled ? "opacity-50" : ""
       }`}
     >
-      <Select disabled={isDisabled}>
+           <Select 
+        disabled={isDisabled}
+        onValueChange={(value) => handleSelectTemplate(parseInt(value))}
+      >
         <SelectTrigger className="w-full border">
           <SelectValue placeholder="Select Template" />
         </SelectTrigger>
         <SelectContent>
-          {/* Map templates here maximum of 10 show newest */}
           {templates.slice(0, 10).map((template) => (
             <SelectItem
               key={template.template_id}
@@ -208,7 +236,14 @@ export default function TemplateSelector() {
                     onClick={() => handleSelectTemplate(template.formula_id)}
                   >
                     <p className="font-medium">{template.template_name}</p>
-                    <Button variant="outline" size="sm">
+                                       <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the parent div's onClick
+                        handleSelectTemplate(template.template_id);
+                      }}
+                    >
                       Apply
                     </Button>
                   </div>

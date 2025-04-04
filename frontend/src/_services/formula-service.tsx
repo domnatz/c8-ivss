@@ -1,5 +1,5 @@
 import { AppDispatch } from "@/store";
-import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables } from "@/_actions/formula-actions";
+import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables, getFormulaVariablesWithMappings} from "@/_actions/formula-actions";
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
 // Define a fallback URL to use if environment variable isn't set
@@ -52,6 +52,11 @@ export const formulaService = {
   getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
     return getFormulaVariables(formulaId);
   },
+  
+  // Add this new method
+  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
+    return getFormulaVariablesWithMappings(formulaId, contextTagId);
+  },
 };
 
 // New client-side functions for component integration
@@ -90,5 +95,16 @@ export const formulaClientService = {
       console.error("Error loading formula variables:", error);
       return [];
     }
+  },
+  
+  // Add this new method
+  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
+    try {
+      return await formulaService.getFormulaVariablesWithMappings(formulaId, contextTagId);
+    } catch (error) {
+      console.error("Error loading formula variables with mappings:", error);
+      return [];
+    }
   }
 };
+
