@@ -1255,147 +1255,100 @@ async def assign_template_to_subgroup_tag(
         await db.flush()
         
         # Create SubgroupTemplate association if it doesn't exist
-        if subgroup_id is not None:
-            existing_assignment = await db.execute(
-                select(models.SubgroupTemplate).where(
-                    models.SubgroupTemplate.subgroup_id == subgroup_id,
-                    models.SubgroupTemplate.template_id == assignment.template_id
-                )
-            )
-            if not existing_assignment.scalars().first():
-                new_assignment = models.SubgroupTemplate(
-                    subgroup_id=subgroup_id,
-                    template_id=assignment.template_id
-                )
-                db.add(new_assignment)
-                await db.flush()
-        
-        # Find all subgroup tags associated with this template as a source
-        # Query the SubgroupTemplate table for other subgroups using this template
-        template_subgroup_result = await db.execute(
+        existing_assignment = await db.execute(
             select(models.SubgroupTemplate).where(
+                models.SubgroupTemplate.subgroup_id == subgroup_id,
                 models.SubgroupTemplate.template_id == assignment.template_id
             )
         )
-        template_subgroups = template_subgroup_result.scalars().all()
+        if not existing_assignment.scalars().first() and subgroup_id is not None:
+            new_assignment = models.SubgroupTemplate(
+                subgroup_id=subgroup_id,
+                template_id=assignment.template_id
+            )
+            db.add(new_assignment)
+            await db.flush()
         
-        # Find source tags from any previously created template instances
-        source_tags = []
+        # Find source subgroup tags that use this formula as a template
+        # These are tags that have this formula assigned
+        source_tags_result = await db.execute(
+            select(models.SubgroupTag).where(
+                models.SubgroupTag.formula_id == template.formula_id
+            )
+        )
+        source_tags = source_tags_result.scalars().all()
         
-        for template_subgroup in template_subgroups:
-            # Skip if this is the same subgroup we're working with
-            if template_subgroup.subgroup_id == subgroup_id:
+        # Map of old tag ID to new tag ID to maintain relationships
+        tag_id_mapping = {}
+        
+        # First pass: Create all top-level children
+        for source_tag in source_tags:
+            # Skip if this is the same tag we're updating or a main parent tag
+            if source_tag.subgroup_tag_id == assignment.subgroup_tag_id or source_tag.parent_subgroup_tag_id is None:
                 continue
                 
-            # Look for root level tags with this template's formula and from this subgroup
-            root_tags_result = await db.execute(
-                select(models.SubgroupTag).where(
-                    models.SubgroupTag.subgroup_id == template_subgroup.subgroup_id,
-                    models.SubgroupTag.formula_id == template.formula_id
+            # If this is a direct child of an original template tag
+            if source_tag.parent_subgroup_tag_id not in tag_id_mapping:
+                # Create new tag as child of the target tag
+                new_child_tag = models.SubgroupTag(
+                    subgroup_id=None,  # Child tags don't have direct subgroup association
+                    tag_id=source_tag.tag_id,
+                    subgroup_tag_name=source_tag.subgroup_tag_name,
+                    parent_subgroup_tag_id=assignment.subgroup_tag_id,  # Make it a child of our target tag
+                    formula_id=source_tag.formula_id  # Preserve any formula assignment
                 )
-            )
-            root_tags = root_tags_result.scalars().all()
-            
-            for root_tag in root_tags:
-                # Get all child tags (recursive query)
-                tag_tree = await get_tag_tree(db, root_tag.subgroup_tag_id)
-                source_tags.append((root_tag, tag_tree))
-        
-        # If no source tags found, look for any tags using this formula
-        if not source_tags:
-            # Find any subgroup_tag using this formula
-            all_tags_result = await db.execute(
-                select(models.SubgroupTag).where(
-                    models.SubgroupTag.formula_id == template.formula_id
-                )
-            )
-            all_tags = all_tags_result.scalars().all()
-            
-            for tag in all_tags:
-                # Skip if this is the tag we're updating or if it's a child tag
-                if tag.subgroup_tag_id == assignment.subgroup_tag_id:
-                    continue
-                    
-                if tag.parent_subgroup_tag_id is None:
-                    # This is a root tag
-                    tag_tree = await get_tag_tree(db, tag.subgroup_tag_id)
-                    source_tags.append((tag, tag_tree))
-        
-        # If still no source, use formula variable mappings to create a minimal structure
-        if not source_tags:
-            # Get variables for this formula
-            variables_result = await db.execute(
-                select(models.FormulaVariable).where(
-                    models.FormulaVariable.formula_id == template.formula_id
-                )
-            )
-            variables = variables_result.scalars().all()
-            
-            # Create input and output child tags under the target tag
-            input_tag = models.SubgroupTag(
-                subgroup_id=None,
-                tag_id=None,
-                subgroup_tag_name="Input Variables",
-                parent_subgroup_tag_id=assignment.subgroup_tag_id,
-                formula_id=None
-            )
-            db.add(input_tag)
-            await db.flush()
-            
-            output_tag = models.SubgroupTag(
-                subgroup_id=None,
-                tag_id=None,
-                subgroup_tag_name="Output",
-                parent_subgroup_tag_id=assignment.subgroup_tag_id,
-                formula_id=None
-            )
-            db.add(output_tag)
-            await db.flush()
-            
-            # Create variable mappings for input variables
-            for variable in variables:
-                # Create a child tag for each variable
-                var_tag = models.SubgroupTag(
-                    subgroup_id=None,
-                    tag_id=None,
-                    subgroup_tag_name=variable.variable_name,
-                    parent_subgroup_tag_id=input_tag.subgroup_tag_id,
-                    formula_id=None
-                )
-                db.add(var_tag)
+                db.add(new_child_tag)
                 await db.flush()
                 
-                # Create mapping
-                var_mapping = models.VariableTagMapping(
-                    variable_id=variable.variable_id,
-                    subgroup_tag_id=var_tag.subgroup_tag_id,  # Map to the variable-specific tag
-                    context_tag_id=assignment.subgroup_tag_id  # Context is the parent tag
+                # Add to mapping
+                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
+        
+        # Second pass: Handle nested children (children of children)
+        for source_tag in source_tags:
+            # If this tag's parent is one we've already copied
+            if (source_tag.parent_subgroup_tag_id in tag_id_mapping and 
+                source_tag.subgroup_tag_id not in tag_id_mapping):
+                
+                # Get the new parent tag ID
+                new_parent_id = tag_id_mapping[source_tag.parent_subgroup_tag_id]
+                
+                # Create new tag as child of the new parent
+                new_child_tag = models.SubgroupTag(
+                    subgroup_id=None,
+                    tag_id=source_tag.tag_id,
+                    subgroup_tag_name=source_tag.subgroup_tag_name,
+                    parent_subgroup_tag_id=new_parent_id,
+                    formula_id=source_tag.formula_id
                 )
-                db.add(var_mapping)
-        else:
-            # We have source tags, copy their structure
-            tag_id_mapping = {}  # old_id -> new_id
+                db.add(new_child_tag)
+                await db.flush()
+                
+                # Add to mapping
+                tag_id_mapping[source_tag.subgroup_tag_id] = new_child_tag.subgroup_tag_id
+        
+        # Copy variable mappings for these tags
+        for old_tag_id, new_tag_id in tag_id_mapping.items():
+            # Find variable mappings where this tag is used
+            mappings_result = await db.execute(
+                select(models.VariableTagMapping).where(
+                    (models.VariableTagMapping.context_tag_id == old_tag_id) |
+                    (models.VariableTagMapping.subgroup_tag_id == old_tag_id)
+                )
+            )
+            mappings = mappings_result.scalars().all()
             
-            # Process each source tag and its tree
-            for root_tag, tag_tree in source_tags:
-                # Start by creating the structure
-                await copy_tag_structure(
-                    db, 
-                    tag_tree, 
-                    assignment.subgroup_tag_id, 
-                    tag_id_mapping
-                )
+            for mapping in mappings:
+                # Determine the correct context and target tags for the new mapping
+                new_context_tag_id = tag_id_mapping.get(mapping.context_tag_id, mapping.context_tag_id)
+                new_subgroup_tag_id = tag_id_mapping.get(mapping.subgroup_tag_id, mapping.subgroup_tag_id)
                 
-                # Copy variable mappings
-                await copy_variable_mappings(
-                    db,
-                    tag_id_mapping,
-                    root_tag.subgroup_tag_id,
-                    assignment.subgroup_tag_id
+                # Create new mapping using the new tag IDs
+                new_mapping = models.VariableTagMapping(
+                    variable_id=mapping.variable_id,
+                    subgroup_tag_id=new_subgroup_tag_id,
+                    context_tag_id=new_context_tag_id
                 )
-                
-                # No need to process more than one source
-                break
+                db.add(new_mapping)
         
         await db.commit()
         
@@ -1403,83 +1356,9 @@ async def assign_template_to_subgroup_tag(
             "message": "Template assigned to subgroup tag successfully with tag structure",
             "template_id": assignment.template_id,
             "subgroup_tag_id": assignment.subgroup_tag_id,
-            "formula_id": template.formula_id
+            "formula_id": template.formula_id,
+            "tags_created": len(tag_id_mapping)
         }
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}")
-
-# Helper function to get a tag tree (recursive)
-async def get_tag_tree(db, tag_id):
-    result = await db.execute(
-        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == tag_id)
-    )
-    tag = result.scalars().first()
-    if not tag:
-        return None
-        
-    # Get all children
-    children_result = await db.execute(
-        select(models.SubgroupTag).where(models.SubgroupTag.parent_subgroup_tag_id == tag_id)
-    )
-    children = children_result.scalars().all()
-    
-    child_trees = []
-    for child in children:
-        child_tree = await get_tag_tree(db, child.subgroup_tag_id)
-        if child_tree:
-            child_trees.append(child_tree)
-    
-    return {
-        'tag': tag,
-        'children': child_trees
-    }
-
-# Helper function to copy tag structure
-async def copy_tag_structure(db, tag_tree, parent_id, tag_id_mapping=None):
-    if tag_id_mapping is None:
-        tag_id_mapping = {}
-        
-    tag = tag_tree['tag']
-    
-    # Create new tag as child of parent
-    new_tag = models.SubgroupTag(
-        subgroup_id=None,
-        tag_id=tag.tag_id,
-        subgroup_tag_name=tag.subgroup_tag_name,
-        parent_subgroup_tag_id=parent_id,
-        formula_id=tag.formula_id
-    )
-    db.add(new_tag)
-    await db.flush()
-    
-    # Map old ID to new ID
-    tag_id_mapping[tag.subgroup_tag_id] = new_tag.subgroup_tag_id
-    
-    # Create children recursively
-    for child_tree in tag_tree.get('children', []):
-        await copy_tag_structure(db, child_tree, new_tag.subgroup_tag_id, tag_id_mapping)
-        
-    return tag_id_mapping
-
-# Helper function to copy variable mappings
-async def copy_variable_mappings(db, tag_id_mapping, old_context_id, new_context_id):
-    # Find all mappings using the old context
-    mappings_result = await db.execute(
-        select(models.VariableTagMapping).where(
-            models.VariableTagMapping.context_tag_id == old_context_id
-        )
-    )
-    mappings = mappings_result.scalars().all()
-    
-    for mapping in mappings:
-        # Get the new tag ID if it was copied, otherwise use the old one
-        new_target_tag_id = tag_id_mapping.get(mapping.subgroup_tag_id, mapping.subgroup_tag_id)
-        
-        # Create new mapping
-        new_mapping = models.VariableTagMapping(
-            variable_id=mapping.variable_id,
-            subgroup_tag_id=new_target_tag_id,
-            context_tag_id=new_context_id
-        )
-        db.add(new_mapping)
