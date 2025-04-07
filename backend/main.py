@@ -354,8 +354,13 @@ async def get_subgroup_tags(subgroup_id: int, db: AsyncSession = Depends(get_db)
     if not subgroup:
         raise HTTPException(status_code=404, detail="Subgroup not found")
     
-    # Get tags (may be empty)
-    result = await db.execute(select(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id))
+    # Get tags but filter out template context tags
+    result = await db.execute(
+        select(models.SubgroupTag).where(
+            models.SubgroupTag.subgroup_id == subgroup_id,
+            ~models.SubgroupTag.subgroup_tag_name.like("__TEMPLATE_CONTEXT__%")
+        )
+    )
     tags = result.scalars().all()
     return tags
 
@@ -986,7 +991,7 @@ class TemplateCreate(BaseModel):
 
 @app.post("/api/templates")
 async def create_template(template_data: TemplateCreate, context_tag_id: Optional[int] = None, db: AsyncSession = Depends(get_db)):
-    # First verify the source formula exists
+    # Verify the source formula exists
     source_formula_result = await db.execute(
         select(models.Formulas).where(models.Formulas.formula_id == template_data.formula_id)
     )
@@ -1012,7 +1017,17 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
         db.add(new_template)
         await db.flush()
         
-        # 3. Copy all variables from the source formula
+        # 3. Create a special context tag for this template 
+        template_context_tag = models.SubgroupTag(
+            subgroup_id=None,
+            tag_id=None,
+            subgroup_tag_name=f"__TEMPLATE_CONTEXT__{new_template.template_id}",
+            formula_id=new_formula.formula_id
+        )
+        db.add(template_context_tag)
+        await db.flush()
+        
+        # 4. Copy all variables from the source formula
         variable_mapping = {}
         source_variables_result = await db.execute(
             select(models.FormulaVariable).where(
@@ -1030,8 +1045,15 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
             await db.flush()
             variable_mapping[source_var.variable_id] = new_var.variable_id
         
-        # 4. Copy variable tag mappings ONLY from the specified context
+        # 5. Copy variable tag mappings from the specified context
+        # Track which variables already have mappings to avoid duplicates
+        variables_with_mappings = set()
+        
         for source_var_id, new_var_id in variable_mapping.items():
+            # Skip if we've already created a mapping for this variable
+            if new_var_id in variables_with_mappings:
+                continue
+                
             mappings_query = select(models.VariableTagMapping).where(
                 models.VariableTagMapping.variable_id == source_var_id
             )
@@ -1045,24 +1067,20 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
             mappings_result = await db.execute(mappings_query)
             mappings = mappings_result.scalars().all()
             
-            # Create a special context tag for this template
-            # This is a dummy tag that we'll use to track the mappings for this template
-            template_context_tag = models.SubgroupTag(
-                subgroup_id=None,  # No direct subgroup association
-                tag_id=None,  # No tag association
-                subgroup_tag_name=f"Template {new_template.template_id} Context",
-                formula_id=new_formula.formula_id  # Associate with the new formula
-            )
-            db.add(template_context_tag)
-            await db.flush()
-            
-            for mapping in mappings:
+            if mappings:
+                # Just take the first mapping if multiple exist
+                mapping = mappings[0]
+                
+                # Create new mapping
                 new_mapping = models.VariableTagMapping(
                     variable_id=new_var_id,
                     subgroup_tag_id=mapping.subgroup_tag_id,
-                    context_tag_id=template_context_tag.subgroup_tag_id  # Use the template's context
+                    context_tag_id=template_context_tag.subgroup_tag_id
                 )
                 db.add(new_mapping)
+                
+                # Mark this variable as having a mapping
+                variables_with_mappings.add(new_var_id)
         
         # Commit the transaction
         await db.commit()
@@ -1071,7 +1089,6 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
             "template_id": new_template.template_id,
             "template_name": new_template.template_name,
             "formula_id": new_formula.formula_id,
-            "template_context_tag_id": template_context_tag.subgroup_tag_id,
             "message": "Template created successfully"
         }
         
@@ -1114,30 +1131,100 @@ async def assign_template_to_subgroup_tag(
         await db.flush()
         
         # Create SubgroupTemplate association if it doesn't exist
-        existing_assignment = await db.execute(
-            select(models.SubgroupTemplate).where(
-                models.SubgroupTemplate.subgroup_id == subgroup_id,
-                models.SubgroupTemplate.template_id == assignment.template_id
+        if subgroup_id is not None:
+            existing_assignment = await db.execute(
+                select(models.SubgroupTemplate).where(
+                    models.SubgroupTemplate.subgroup_id == subgroup_id,
+                    models.SubgroupTemplate.template_id == assignment.template_id
+                )
+            )
+            if not existing_assignment.scalars().first():
+                new_assignment = models.SubgroupTemplate(
+                    subgroup_id=subgroup_id,
+                    template_id=assignment.template_id
+                )
+                db.add(new_assignment)
+                await db.flush()
+        
+        # Find the template context tag
+        context_tag_result = await db.execute(
+            select(models.SubgroupTag).where(
+                models.SubgroupTag.subgroup_tag_name == f"__TEMPLATE_CONTEXT__{assignment.template_id}"
             )
         )
-        if not existing_assignment.scalars().first():
-            new_assignment = models.SubgroupTemplate(
-                subgroup_id=subgroup_id,
-                template_id=assignment.template_id
+        template_context_tag = context_tag_result.scalars().first()
+        
+        if not template_context_tag:
+            raise HTTPException(status_code=404, detail="Template context tag not found")
+        
+        # Find all variables for the template's formula
+        variables_result = await db.execute(
+            select(models.FormulaVariable).where(
+                models.FormulaVariable.formula_id == template.formula_id
             )
-            db.add(new_assignment)
+        )
+        formula_variables = variables_result.scalars().all()
+        
+        # Delete existing mappings for this context
+        for variable in formula_variables:
+            await db.execute(
+                delete(models.VariableTagMapping).where(
+                    models.VariableTagMapping.variable_id == variable.variable_id,
+                    models.VariableTagMapping.context_tag_id == assignment.subgroup_tag_id
+                )
+            )
+        
+        # Copy mappings from the template's context
+        for variable in formula_variables:
+            # Check if a new tag was selected for this variable in the new subgroup tag
+            selected_mapping_result = await db.execute(
+                select(models.VariableTagMapping).where(
+                    models.VariableTagMapping.variable_id == variable.variable_id,
+                    models.VariableTagMapping.context_tag_id == assignment.subgroup_tag_id
+                )
+            )
+            selected_mapping = selected_mapping_result.scalars().first()
+            
+            if selected_mapping:
+                # Use the selected tag for the new mapping
+                new_mapping = models.VariableTagMapping(
+                    variable_id=variable.variable_id,
+                    subgroup_tag_id=selected_mapping.subgroup_tag_id,
+                    context_tag_id=assignment.subgroup_tag_id  # Assign to the new context
+                )
+            else:
+                # Fallback to the template's context mapping
+                source_mappings_result = await db.execute(
+                    select(models.VariableTagMapping).where(
+                        models.VariableTagMapping.variable_id == variable.variable_id,
+                        models.VariableTagMapping.context_tag_id == template_context_tag.subgroup_tag_id
+                    )
+                )
+                template_mappings = source_mappings_result.scalars().all()
+                
+                if template_mappings:
+                    mapping = template_mappings[0]
+                    new_mapping = models.VariableTagMapping(
+                        variable_id=variable.variable_id,
+                        subgroup_tag_id=mapping.subgroup_tag_id,
+                        context_tag_id=assignment.subgroup_tag_id  # Assign to the new context
+                    )
+                else:
+                    continue  # Skip if no mapping exists
+                
+            db.add(new_mapping)
+            await db.flush()
         
         await db.commit()
         
         return {
-            "message": "Template assigned to subgroup tag successfully",
+            "message": "Template assigned successfully",
             "template_id": assignment.template_id,
-            "subgroup_tag_id": assignment.subgroup_tag_id,
-            "formula_id": template.formula_id
+            "subgroup_tag_id": assignment.subgroup_tag_id
         }
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}")
 
 @app.get("/api/templates")
 async def get_all_templates(db: AsyncSession = Depends(get_db)):
@@ -1315,19 +1402,31 @@ async def assign_template_to_subgroup_tag(
         await db.flush()
         
         # Create SubgroupTemplate association if it doesn't exist
-        existing_assignment = await db.execute(
-            select(models.SubgroupTemplate).where(
-                models.SubgroupTemplate.subgroup_id == subgroup_id,
-                models.SubgroupTemplate.template_id == assignment.template_id
+        if subgroup_id is not None:
+            existing_assignment = await db.execute(
+                select(models.SubgroupTemplate).where(
+                    models.SubgroupTemplate.subgroup_id == subgroup_id,
+                    models.SubgroupTemplate.template_id == assignment.template_id
+                )
+            )
+            if not existing_assignment.scalars().first():
+                new_assignment = models.SubgroupTemplate(
+                    subgroup_id=subgroup_id,
+                    template_id=assignment.template_id
+                )
+                db.add(new_assignment)
+                await db.flush()
+        
+        # Find the template context tag
+        context_tag_result = await db.execute(
+            select(models.SubgroupTag).where(
+                models.SubgroupTag.subgroup_tag_name == f"__TEMPLATE_CONTEXT__{assignment.template_id}"
             )
         )
-        if not existing_assignment.scalars().first() and subgroup_id is not None:
-            new_assignment = models.SubgroupTemplate(
-                subgroup_id=subgroup_id,
-                template_id=assignment.template_id
-            )
-            db.add(new_assignment)
-            await db.flush()
+        template_context_tag = context_tag_result.scalars().first()
+        
+        if not template_context_tag:
+            raise HTTPException(status_code=404, detail="Template context tag not found")
         
         # Find all variables for the template's formula
         variables_result = await db.execute(
@@ -1337,11 +1436,7 @@ async def assign_template_to_subgroup_tag(
         )
         formula_variables = variables_result.scalars().all()
         
-        # Track created/updated mappings to include in response
-        created_mappings = []
-        
-        # IMPORTANT CHANGE: First, delete all existing mappings for this context
-        # This ensures we start fresh with the template's mappings
+        # Delete existing mappings for this context
         for variable in formula_variables:
             await db.execute(
                 delete(models.VariableTagMapping).where(
@@ -1349,75 +1444,46 @@ async def assign_template_to_subgroup_tag(
                     models.VariableTagMapping.context_tag_id == assignment.subgroup_tag_id
                 )
             )
-            
-        # Get the template details to find its source mappings
-        template_details_result = await db.execute(
-            select(models.Templates).where(models.Templates.template_id == assignment.template_id)
-        )
-        template_details = template_details_result.scalars().first()
         
-        # For each variable in the formula, get its mappings from the template
+        # Track variables that already have mappings
+        variables_with_mappings = set()
+        
+        # Copy mappings from the template's context
         for variable in formula_variables:
-            # Get mappings specific to this template
-            # IMPORTANT FIX: When creating mappings for a template, we need to associate them with the template's context
-            # We'll use the template itself as the context for retrieving the right mappings
-            # This ensures we only get mappings that were specifically created for this template
+            # Skip if we've already created a mapping for this variable
+            if variable.variable_id in variables_with_mappings:
+                continue
+            
             source_mappings_result = await db.execute(
                 select(models.VariableTagMapping).where(
                     models.VariableTagMapping.variable_id == variable.variable_id,
-                    # Here we use a subquery to find the context tags specifically associated with this template
-                    # through the template creation process
-                    models.VariableTagMapping.context_tag_id.in_(
-                        select(models.SubgroupTag.subgroup_tag_id).where(
-                            models.SubgroupTag.formula_id == template_details.formula_id
-                        )
-                    )
+                    models.VariableTagMapping.context_tag_id == template_context_tag.subgroup_tag_id
                 )
             )
             template_mappings = source_mappings_result.scalars().all()
             
-            if not template_mappings:
-                # If no specific mappings found for the template context, 
-                # create a blank mapping to indicate it needs to be mapped
-                continue  # Skip creating a default mapping for now
+            if template_mappings:
+                # Just take the first mapping to avoid duplicates
+                mapping = template_mappings[0]
                 
-            # Create a new mapping for each variable in the context of the target tag
-            for mapping in template_mappings:
-                # Get tag info for response
-                tag_info_result = await db.execute(
-                    select(models.SubgroupTag).where(
-                        models.SubgroupTag.subgroup_tag_id == mapping.subgroup_tag_id
-                    )
-                )
-                tag_info = tag_info_result.scalars().first()
-                
-                # Create a new mapping
+                # Create new mapping using this tag
                 new_mapping = models.VariableTagMapping(
                     variable_id=variable.variable_id,
                     subgroup_tag_id=mapping.subgroup_tag_id,
-                    context_tag_id=assignment.subgroup_tag_id  # New context
+                    context_tag_id=assignment.subgroup_tag_id  # Assign to the new context
                 )
                 db.add(new_mapping)
                 await db.flush()
                 
-                created_mappings.append({
-                    "mapping_id": new_mapping.mapping_id,
-                    "variable_id": variable.variable_id,
-                    "variable_name": variable.variable_name,
-                    "subgroup_tag_id": mapping.subgroup_tag_id,
-                    "subgroup_tag_name": tag_info.subgroup_tag_name if tag_info else "Unknown",
-                    "context_tag_id": assignment.subgroup_tag_id
-                })
+                # Mark this variable as having a mapping
+                variables_with_mappings.add(variable.variable_id)
         
         await db.commit()
         
-        # Return with mappings included
         return {
-            "message": "Template assigned to subgroup tag successfully with variable mappings",
+            "message": "Template assigned successfully",
             "template_id": assignment.template_id,
-            "subgroup_tag_id": assignment.subgroup_tag_id,
-            "formula_id": template.formula_id,
-            "mappings": created_mappings
+            "subgroup_tag_id": assignment.subgroup_tag_id
         }
     except Exception as e:
         await db.rollback()
