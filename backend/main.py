@@ -1488,3 +1488,146 @@ async def assign_template_to_subgroup_tag(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to assign template: {str(e)}")
+    
+@app.delete("/api/templates/{template_id}")
+async def delete_template(template_id: int, db: AsyncSession = Depends(get_db)):
+    # Verify template exists
+    template_result = await db.execute(
+        select(models.Templates).where(models.Templates.template_id == template_id)
+    )
+    template = template_result.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    try:
+        # Delete the template's context tag
+        context_tag_result = await db.execute(
+            select(models.SubgroupTag).where(
+                models.SubgroupTag.subgroup_tag_name == f"__TEMPLATE_CONTEXT__{template_id}"
+            )
+        )
+        context_tag = context_tag_result.scalars().first()
+        if context_tag:
+            await db.execute(
+                delete(models.SubgroupTag).where(
+                    models.SubgroupTag.subgroup_tag_id == context_tag.subgroup_tag_id
+                )
+            )
+        
+        # Delete the template itself
+        await db.execute(
+            delete(models.Templates).where(models.Templates.template_id == template_id)
+        )
+        
+        await db.commit()
+        return {"message": "Template deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete template: {str(e)}")
+
+@app.delete("/api/subgroup-tags/{subgroup_tag_id}")
+async def delete_subgroup_tag(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
+    # Verify subgroup tag exists
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+    )
+    subgroup_tag = tag_result.scalars().first()
+    if not subgroup_tag:
+        raise HTTPException(status_code=404, detail="Subgroup tag not found")
+    
+    try:
+        # Delete all mappings associated with this subgroup tag
+        await db.execute(
+            delete(models.VariableTagMapping).where(
+                models.VariableTagMapping.context_tag_id == subgroup_tag_id
+            )
+        )
+        
+        # Delete the subgroup tag itself
+        await db.execute(
+            delete(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+        )
+        
+        await db.commit()
+        return {"message": "Subgroup tag deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete subgroup tag: {str(e)}")
+    
+@app.delete("/api/variable-mappings/{mapping_id}")
+async def delete_variable_mapping(mapping_id: int, db: AsyncSession = Depends(get_db)):
+    # Verify mapping exists
+    mapping_result = await db.execute(
+        select(models.VariableTagMapping).where(models.VariableTagMapping.mapping_id == mapping_id)
+    )
+    mapping = mapping_result.scalars().first()
+    if not mapping:
+        raise HTTPException(status_code=404, detail="Variable mapping not found")
+    
+    try:
+        # Delete the mapping
+        await db.execute(
+            delete(models.VariableTagMapping).where(models.VariableTagMapping.mapping_id == mapping_id)
+        )
+        
+        await db.commit()
+        return {"message": "Variable mapping deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete variable mapping: {str(e)}")
+
+@app.delete("/api/formulas/{formula_id}")
+async def delete_formula(formula_id: int, db: AsyncSession = Depends(get_db)):
+    # Verify formula exists
+    formula_result = await db.execute(
+        select(models.Formulas).where(models.Formulas.formula_id == formula_id)
+    )
+    formula = formula_result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+    
+    try:
+        # Delete all variables associated with this formula
+        await db.execute(
+            delete(models.FormulaVariable).where(
+                models.FormulaVariable.formula_id == formula_id
+            )
+        )
+        
+        # Delete the formula itself
+        await db.execute(
+            delete(models.Formulas).where(models.Formulas.formula_id == formula_id)
+        )
+        
+        await db.commit()
+        return {"message": "Formula deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete formula: {str(e)}")
+
+@app.delete("/api/subgroups/{subgroup_id}")
+async def delete_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
+    # Verify subgroup exists
+    subgroup_result = await db.execute(
+        select(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id)
+    )
+    subgroup = subgroup_result.scalars().first()
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Subgroup not found")
+    
+    try:
+        # Delete all tags associated with this subgroup
+        await db.execute(
+            delete(models.SubgroupTag).where(models.SubgroupTag.subgroup_id == subgroup_id)
+        )
+        
+        # Delete the subgroup itself
+        await db.execute(
+            delete(models.Subgroups).where(models.Subgroups.subgroup_id == subgroup_id)
+        )
+        
+        await db.commit()
+        return {"message": "Subgroup deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete subgroup: {str(e)}")
