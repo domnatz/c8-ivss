@@ -79,37 +79,3 @@ export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId:
   return response.json();
 }
 
-// Add this function to your existing subgroup-tag-service.tsx file after the other functions
-
-export async function exportSubgroupTagDataToExcel(subgroupTagId: number) {
-  try {
-    const response = await fetch(`${BASE_URL}/api/subgroups/${subgroupTagId}/export`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to export subgroup tag data');
-    }
-    
-    // Get the blob from the response
-    const blob = await response.blob();
-    
-    // Create download link and trigger download
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `subgroup_tag_${subgroupTagId}_export.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error exporting subgroup tag data:', error);
-    return { success: false, error: error.message };
-  }
-}

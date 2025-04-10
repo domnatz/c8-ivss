@@ -11,11 +11,18 @@ const API_URL = "http://localhost:8000/api";
  * Save a new template
  */
 export const saveTemplate = async (
-  params: Template
+  params: Template,
+  contextTagId?: number
 ): Promise<Template> => {
-  console.log("API call: saveTemplate", params);
+  console.log("API call: saveTemplate", params, "Context Tag ID:", contextTagId);
 
-  const response = await fetch(`${API_URL}/templates`, {
+  // Create URL with optional context_tag_id parameter
+  let url = `${API_URL}/templates`;
+  if (contextTagId) {
+    url += `?context_tag_id=${contextTagId}`;
+  }
+
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

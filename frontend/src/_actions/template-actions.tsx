@@ -4,10 +4,10 @@ import { Template } from "@/models/template";
 /**
  * Save a template and return a simplified result
  */
-export const saveTemplate = async (params: Template): Promise<{ success: boolean; message: string }> => {
+export const saveTemplate = async (params: Template, contextTagId?: number): Promise<{ success: boolean; message: string }> => {
   try {
-    console.log("Action: saveTemplate", params);
-    const template = await templateService.saveTemplate(params);
+    console.log("Action: saveTemplate", params, "Context Tag ID:", contextTagId);
+    const template = await templateService.saveTemplate(params, contextTagId);
     console.log("Template saved:", template);
     
     // Use the template_name from the params as fallback if asset_name is undefined

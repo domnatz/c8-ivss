@@ -999,6 +999,15 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
     if not source_formula:
         raise HTTPException(status_code=404, detail="Source formula not found")
     
+    # Also verify the context tag if provided
+    if context_tag_id:
+        context_tag_result = await db.execute(
+            select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == context_tag_id)
+        )
+        context_tag = context_tag_result.scalars().first()
+        if not context_tag:
+            raise HTTPException(status_code=404, detail="Context tag not found")
+    
     try:
         # 1. Create a new formula as a copy of the source
         new_formula = models.Formulas(
@@ -1054,17 +1063,22 @@ async def create_template(template_data: TemplateCreate, context_tag_id: Optiona
             if new_var_id in variables_with_mappings:
                 continue
                 
-            mappings_query = select(models.VariableTagMapping).where(
-                models.VariableTagMapping.variable_id == source_var_id
-            )
-            
-            # If context_tag_id is provided, only copy mappings from that context
-            if context_tag_id is not None:
-                mappings_query = mappings_query.where(
-                    models.VariableTagMapping.context_tag_id == context_tag_id
+            # Only look for mappings in the specified context tag ID when provided
+            if context_tag_id:
+                mappings_result = await db.execute(
+                    select(models.VariableTagMapping).where(
+                        models.VariableTagMapping.variable_id == source_var_id,
+                        models.VariableTagMapping.context_tag_id == context_tag_id
+                    )
+                )
+            else:
+                # Fallback to any context if none specified
+                mappings_result = await db.execute(
+                    select(models.VariableTagMapping).where(
+                        models.VariableTagMapping.variable_id == source_var_id
+                    )
                 )
                 
-            mappings_result = await db.execute(mappings_query)
             mappings = mappings_result.scalars().all()
             
             if mappings:

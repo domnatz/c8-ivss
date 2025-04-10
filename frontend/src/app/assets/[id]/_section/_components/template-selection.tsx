@@ -87,7 +87,7 @@ export default function TemplateSelector() {
       // Show loading state
       toast.info("Applying template...");
       
-      // Call the action to assign the template
+      // Call the action to assign the template, passing the current subgroup tag ID
       const result = await assignTemplate(templateId, subgroupTag.subgroup_tag_id);
       
       if (result.success) {
@@ -108,6 +108,7 @@ export default function TemplateSelector() {
       toast.error("An unexpected error occurred");
     }
   };
+  
   // Handle template save
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
@@ -124,7 +125,9 @@ export default function TemplateSelector() {
       "Saving template:",
       templateName,
       "for formula:",
-      selectedformulaId
+      selectedformulaId,
+      "with context tag:",
+      subgroupTag?.subgroup_tag_id
     );
 
     setIsSaving(true);
@@ -134,7 +137,7 @@ export default function TemplateSelector() {
         template_id: 0, // Assuming 0 for new template
         template_name: templateName,
         formula_id: Number(selectedformulaId),
-      });
+      }, subgroupTag?.subgroup_tag_id); // Pass the selected subgroup tag ID as context
 
       console.log("Save result:", result);
 
@@ -169,7 +172,7 @@ export default function TemplateSelector() {
         isDisabled ? "opacity-50" : ""
       }`}
     >
-           <Select 
+      <Select 
         disabled={isDisabled}
         onValueChange={(value) => handleSelectTemplate(parseInt(value))}
       >
@@ -233,10 +236,10 @@ export default function TemplateSelector() {
                   <div
                     key={template.template_id || template.formula_id}
                     className="p-2 pl-4 bg-background border rounded-md hover:bg-background/50 cursor-pointer flex justify-between items-center"
-                    onClick={() => handleSelectTemplate(template.formula_id)}
+                    onClick={() => handleSelectTemplate(template.template_id)}
                   >
                     <p className="font-medium">{template.template_name}</p>
-                                       <Button 
+                    <Button 
                       variant="outline" 
                       size="sm"
                       onClick={(e) => {

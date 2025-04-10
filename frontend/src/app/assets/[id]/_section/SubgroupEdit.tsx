@@ -26,7 +26,6 @@ import { TagDetails } from "./_components/tag-details";
 import { useEffect } from "react";
 import { Subgroup } from "@/models/subgroup";
 import { Subgroup_tag } from "@/models/subgroup-tag";
-import { getAssetById } from "@/_services/asset-service";
 import { fetchTagsBySubgroupId } from "@/_services/subgroup-service";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";

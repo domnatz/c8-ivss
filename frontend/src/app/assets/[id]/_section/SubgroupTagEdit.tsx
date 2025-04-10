@@ -136,6 +136,33 @@ export default function SubgroupTagEdit({
     fetchVariableMappings();
   }, [selectedSubgroupTag]);
 
+  // Add this refresh function to reload variable mappings
+  const refreshVariableMappings = async () => {
+    if (!selectedSubgroupTag) return;
+
+    setLoadingMappings(true);
+    try {
+      const mappings = await getVariableMappings(
+        selectedSubgroupTag.subgroup_tag_id
+      );
+      const mappingsMap = mappings.reduce(
+        (acc: Record<number, any>, mapping: any) => {
+          if (mapping.variable_id) {
+            acc[mapping.variable_id] = mapping;
+          }
+          return acc;
+        },
+        {}
+      );
+      setVariableMappings(mappingsMap);
+    } catch (error) {
+      console.error("Error refreshing variable mappings:", error);
+      toast.error("Failed to refresh variable mappings");
+    } finally {
+      setLoadingMappings(false);
+    }
+  };
+
   // Handle removing a variable mapping
   const handleRemoveMapping = async (variableId: number) => {
     if (!selectedSubgroupTag || !variableId) return;
@@ -244,12 +271,12 @@ export default function SubgroupTagEdit({
       <div className="w-full ">
         <TemplateSelector />
       </div>
-
+      
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTag ? (
           <>
-            {/* Use the FormulaSection component */}
+            {/* FormulaSection moved inside the selectedSubgroupTag conditional */}
             <FormulaSection isDisabled={!selectedSubgroupTag} />
 
             {/* Display formula variables with mappings */}
@@ -292,6 +319,7 @@ export default function SubgroupTagEdit({
                         buttonText={`Assign tag to ${variable.variable_name}`}
                         variableName={variable.variable_name}
                         variableId={variable.variable_id}
+                        refreshChildTags={refreshVariableMappings} // Add this prop
                       />
                     )}
                   </div>
@@ -313,16 +341,6 @@ export default function SubgroupTagEdit({
           </span>
         )}
       </div>
-
-      <Button
-        variant="default"
-        className="cursor-pointer"
-        // onClick={handleAddToDatabase}
-        disabled={!selectedSubgroupTag}
-      >
-        <CheckIcon className="w-4 h-4" />
-        <span>Save Changes</span>
-      </Button>
     </div>
   );
 }
