@@ -29,7 +29,7 @@ import AssignSubgroupTagVariable from "./_components/assign-subgroup_tag-variabl
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formulaClientService } from "@/_services/formula-service";
+import { formulaClientService } from "@/_actions/formula-actions";
 import {
   getVariableMappings,
   removeVariableMapping,

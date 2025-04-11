@@ -1,89 +1,110 @@
-"use server";
+import { AppDispatch } from "@/store";
+import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables, getFormulaVariablesWithMappings} from "@/_services/formula-service";
+import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
-import { Formula } from "@/models/formula";
+// Define a fallback URL to use if environment variable isn't set
+const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
 
-// Define the server-side formula actions
-export async function getAllFormulas(): Promise<Formula[]> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch formulas');
-  }
-  return response.json();
-}
+export const formulaService = {
+  getAllFormulas: async (): Promise<Formula[]> => {
+    return getAllFormulas();
+  },
 
-export async function createFormula(formula: Omit<Formula, 'formula_id'>): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(formula),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to create formula');
-  }
-  return response.json();
-}
+  getFormulaById: async (formulaId: number): Promise<Formula> => {
+    return getFormulaById(formulaId);
+  },
 
-export async function getFormulaById(formulaId: number): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch formula with ID ${formulaId}`);
-  }
-  return response.json();
-}
+  createFormula: async (formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
+    return createFormula(formula);
+  },
 
-export async function updateFormula(formulaId: number, formula: Omit<Formula, 'formula_id'>): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(formula),
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to update formula with ID ${formulaId}`);
-  }
-  return response.json();
-}
+  updateFormula: async (formulaId: number, formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
+    return updateFormula(formulaId, formula);
+  },
 
-export async function deleteFormula(formulaId: number): Promise<void> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`, {
-    method: 'DELETE',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to delete formula with ID ${formulaId}`);
-  }
-}
+  deleteFormula: async (formulaId: number): Promise<void> => {
+    return deleteFormula(formulaId);
+  },
 
-export async function getFormulaVariables(formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/variables`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch variables for formula with ID ${formulaId}`);
-  }
-  return response.json();
-}
-
-export const getFormulaVariablesWithMappings = async (
-  formulaId: number,
-  contextTagId: number
-): Promise<any[]> => {
-  try {
-    const response = await fetch(
-      `http://localhost:8000/api/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
-    );
+  evaluateFormula: async (evaluation: FormulaEvaluation): Promise<FormulaEvaluation> => {
+    const response = await fetch(`${BASE_URL}/formulas/evaluate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(evaluation),
+    });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Failed to fetch formula variables with mappings");
+      throw new Error('Failed to evaluate formula');
     }
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching formula variables with mappings:", error);
-    throw error;
+    return response.json();
+  },
+
+  getFormulaTemplates: async (formulaId: number): Promise<Template[]> => {
+    const response = await fetch(`${BASE_URL}/formulas/${formulaId}/templates`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch templates for formula with ID ${formulaId}`);
+    }
+    return response.json();
+  },
+  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
+    return getFormulaVariables(formulaId);
+  },
+  
+  // Add this new method
+  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
+    return getFormulaVariablesWithMappings(formulaId, contextTagId);
+  },
+  
+};
+
+// New client-side functions for component integration
+export const formulaClientService = {
+  loadFormulas: async (dispatch: AppDispatch): Promise<void> => {
+    dispatch({ type: 'assetSlice/setFormulasLoading', payload: true });
+    try {
+      const formulas = await formulaService.getAllFormulas();
+      dispatch({ type: 'assetSlice/setFormulas', payload: formulas });
+    } catch (error) {
+      console.error("Error loading formulas:", error);
+    } finally {
+      dispatch({ type: 'assetSlice/setFormulasLoading', payload: false });
+    }
+  },
+
+  submitFormula: async (formulaData: Omit<Formula, 'formula_id'>, dispatch: AppDispatch): Promise<boolean> => {
+    try {
+      const newFormula = await formulaService.createFormula(formulaData);
+      dispatch({ type: 'assetSlice/addFormula', payload: newFormula });
+      return true;
+    } catch (error) {
+      console.error("Error submitting formula:", error);
+      return false;
+    }
+  },
+
+  selectFormula: (formula: Formula, dispatch: AppDispatch): void => {
+    dispatch({ type: 'assetSlice/setFormulaInput', payload: formula.formula_expression });
+  },
+
+  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
+    try {
+      return await formulaService.getFormulaVariables(formulaId);
+    } catch (error) {
+      console.error("Error loading formula variables:", error);
+      return [];
+    }
+  },
+  
+  // Add this new method
+  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
+    try {
+      return await formulaService.getFormulaVariablesWithMappings(formulaId, contextTagId);
+    } catch (error) {
+      console.error("Error loading formula variables with mappings:", error);
+      return [];
+    }
   }
 };
+
