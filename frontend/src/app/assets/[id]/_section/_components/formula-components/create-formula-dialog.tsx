@@ -16,6 +16,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { BeakerIcon } from "@heroicons/react/24/outline";
 
 interface CreateFormulaDialogProps {
   isDisabled?: boolean;
@@ -97,8 +98,9 @@ export const CreateFormulaDialog: React.FC<CreateFormulaDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger disabled={isDisabled} asChild>
-        <Button variant="outline" size="sm">
-          Create
+        <Button variant="default" >
+          <BeakerIcon className="h-4 w-4" />
+          Create Formula
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

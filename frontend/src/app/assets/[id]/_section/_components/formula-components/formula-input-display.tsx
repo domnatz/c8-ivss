@@ -4,7 +4,9 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { assetAction } from "../../../_redux/asset-slice";
 import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
+import { formulaClientService } from "@/_actions/formula-actions";
 import { toast } from "react-toastify";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FormulaDisplayProps {
   isDisabled?: boolean;
@@ -14,12 +16,39 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
   isDisabled = false,
 }) => {
   const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = React.useState(false);
   
   // Get state from Redux
   const formulaInput = useAppSelector((state) => state.assetState.formulaInput);
   const selectedSubgroupTag = useAppSelector(
     (state) => state.assetState.selectedSubgroupTag
   );
+
+  // Fetch formula when selected subgroup tag changes
+  React.useEffect(() => {
+    const fetchFormulaForTag = async () => {
+      if (selectedSubgroupTag?.subgroup_tag_id && selectedSubgroupTag?.formula_id) {
+        try {
+          setIsLoading(true);
+          const formulaData = await formulaClientService.getFormulaBySubgroupTagId(selectedSubgroupTag.subgroup_tag_id);
+          if (formulaData && formulaData.formula_expression) {
+            dispatch(assetAction.setFormulaInput(formulaData.formula_expression));
+            dispatch(assetAction.setSelectedFormulaId(formulaData.formula_id));
+          }
+        } catch (error) {
+          console.error("Error fetching formula for tag:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else if (selectedSubgroupTag && !selectedSubgroupTag.formula_id) {
+        // Clear formula if the tag has no formula
+        dispatch(assetAction.setFormulaInput(""));
+        dispatch(assetAction.setSelectedFormulaId(null));
+      }
+    };
+
+    fetchFormulaForTag();
+  }, [selectedSubgroupTag, dispatch]);
 
   const clearFormula = async () => {
     try {
@@ -53,9 +82,11 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
   };
 
   return (
-    <div className="flex w-full justify-between items-center p-2 bg-background rounded-md border border-input">
-      <div className="truncate text-sm">
-        {formulaInput ? (
+    <div className="flex w-full justify-between items-center bg-background rounded-md border border-input">
+      <div className="truncate text-sm flex-1 p-2">
+        {isLoading ? (
+          <Skeleton className="h-4 w-full" />
+        ) : formulaInput ? (
           <span className="font-medium pl-2">{formulaInput}</span>
         ) : (
           <span className="text-muted-foreground pl-2">
@@ -63,13 +94,14 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
           </span>
         )}
       </div>
-      <div className="flex gap-2">
-        {formulaInput && (
+      <div className="flex gap-2 pr-1">
+        {formulaInput && !isLoading && (
           <Button
             variant="ghost"
             size="icon"
             onClick={clearFormula}
             disabled={isDisabled}
+            className="hover:bg-background hover:text-red-500 cursor-pointer"
           >
             <XMarkIcon className="w-4 h-4" />
           </Button>

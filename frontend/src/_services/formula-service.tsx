@@ -87,3 +87,11 @@ export const getFormulaVariablesWithMappings = async (
     throw error;
   }
 };
+
+export async function getFormulaBySubgroupTagId(subgroupTagId: number): Promise<any> {
+  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/subgroup-tags/${subgroupTagId}/formula`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch formula for subgroup tag with ID ${subgroupTagId}`);
+  }
+  return response.json();
+}

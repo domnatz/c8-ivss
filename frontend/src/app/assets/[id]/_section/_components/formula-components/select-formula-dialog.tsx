@@ -2,7 +2,7 @@ import * as React from "react";
 import { Formula } from "@/models/formula";
 import { Button } from "@/components/ui/button";
 import { SearchForm } from "@/components/user/search-form";
-import { TrashIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/outline";
 import { formulaService, formulaClientService } from "@/_actions/formula-actions";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { assetAction } from "../../../_redux/asset-slice";
@@ -69,8 +69,8 @@ export const SelectFormulaDialog: React.FC<SelectFormulaDialogProps> = ({
     setIsDeleting(true);
 
     try {
-      await formulaService.deleteFormula(selectedFormulaForDelete);
-
+      await formulaService.deleteFormula(selectedFormulaForDelete);1
+      
       // Update local state to remove deleted formula
       dispatch(assetAction.removeFormula(selectedFormulaForDelete));
 
@@ -150,8 +150,8 @@ export const SelectFormulaDialog: React.FC<SelectFormulaDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger disabled={isDisabled} asChild>
-        <Button variant="outline" size="sm">
-          Select
+        <Button variant="outline" size="icon">
+          <ChevronUpDownIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

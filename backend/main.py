@@ -1645,3 +1645,47 @@ async def delete_subgroup(subgroup_id: int, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete subgroup: {str(e)}")
+
+@app.get("/api/subgroup-tags/{subgroup_tag_id}/formula")
+async def get_subgroup_tag_formula(subgroup_tag_id: int, db: AsyncSession = Depends(get_db)):
+    """Get the formula associated with a specific subgroup tag"""
+    
+    # Verify subgroup tag exists
+    tag_result = await db.execute(
+        select(models.SubgroupTag).where(models.SubgroupTag.subgroup_tag_id == subgroup_tag_id)
+    )
+    subgroup_tag = tag_result.scalars().first()
+    if not subgroup_tag:
+        raise HTTPException(status_code=404, detail="Subgroup tag not found")
+    
+    # Check if the tag has an associated formula
+    if not subgroup_tag.formula_id:
+        return {"message": "No formula associated with this tag"}
+    
+    # Get formula details
+    formula_result = await db.execute(
+        select(models.Formulas).where(models.Formulas.formula_id == subgroup_tag.formula_id)
+    )
+    formula = formula_result.scalars().first()
+    if not formula:
+        raise HTTPException(status_code=404, detail="Associated formula not found")
+    
+    # Get variables for this formula
+    variables_result = await db.execute(
+        select(models.FormulaVariable).where(models.FormulaVariable.formula_id == formula.formula_id)
+    )
+    variables = variables_result.scalars().all()
+    
+    # Format response with formula and variables
+    return {
+        "formula_id": formula.formula_id,
+        "formula_name": formula.formula_name,
+        "formula_desc": formula.formula_desc,
+        "formula_expression": formula.formula_expression,
+        "variables": [
+            {
+                "variable_id": var.variable_id,
+                "variable_name": var.variable_name
+            } for var in variables
+        ]
+    }

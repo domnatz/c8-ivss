@@ -1,5 +1,5 @@
 import { AppDispatch } from "@/store";
-import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables, getFormulaVariablesWithMappings} from "@/_services/formula-service";
+import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables, getFormulaVariablesWithMappings, getFormulaBySubgroupTagId } from "@/_services/formula-service";
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
 // Define a fallback URL to use if environment variable isn't set
@@ -52,11 +52,13 @@ export const formulaService = {
     return getFormulaVariables(formulaId);
   },
   
-  // Add this new method
   getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
     return getFormulaVariablesWithMappings(formulaId, contextTagId);
   },
   
+  getFormulaBySubgroupTagId: async (subgroupTagId: number): Promise<any> => {
+    return getFormulaBySubgroupTagId(subgroupTagId);
+  },
 };
 
 // New client-side functions for component integration
@@ -97,7 +99,6 @@ export const formulaClientService = {
     }
   },
   
-  // Add this new method
   getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
     try {
       return await formulaService.getFormulaVariablesWithMappings(formulaId, contextTagId);
@@ -105,6 +106,15 @@ export const formulaClientService = {
       console.error("Error loading formula variables with mappings:", error);
       return [];
     }
-  }
+  },
+  
+  getFormulaBySubgroupTagId: async (subgroupTagId: number): Promise<any> => {
+    try {
+      return await formulaService.getFormulaBySubgroupTagId(subgroupTagId);
+    } catch (error) {
+      console.error("Error fetching formula for subgroup tag:", error);
+      return null;
+    }
+  },
 };
 
