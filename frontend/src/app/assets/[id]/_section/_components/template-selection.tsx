@@ -14,11 +14,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { saveTemplate, getTemplates, assignTemplate } from "@/_actions/template-actions";
+import { saveTemplate, getTemplates, assignTemplate, deleteTemplate } from "@/_actions/template-actions";
 import {
   ChevronUpDownIcon,
   BookmarkIcon,
   CheckIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,10 +48,13 @@ export default function TemplateSelector() {
   // Local UI states
   const [templateName, setTemplateName] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
+  const [selectDialogOpen, setSelectDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = React.useState<number | null>(null);
 
-  // Fetch templates when component mounts
+  // Fetch templates when component mounts or after actions that modify templates
   React.useEffect(() => {
     const fetchTemplates = async () => {
       dispatch(assetAction.setTemplatesLoading(true));
@@ -66,7 +70,7 @@ export default function TemplateSelector() {
     };
 
     fetchTemplates();
-  }, [saveDialogOpen, dispatch]); // Refresh when save dialog closes
+  }, [saveDialogOpen, isDeleting, dispatch]); // Refresh when save dialog closes or after deletion
 
   // Filter templates based on search query
   const filteredTemplates = React.useMemo(() => {
@@ -98,14 +102,46 @@ export default function TemplateSelector() {
           dispatch(assetAction.setSelectedFormulaId(result.formula_id));
         }
         
-        // Reset search query
+        // Close dialog after success
+        setTimeout(() => {
+          setSelectDialogOpen(false);
+          console.log("🔒 Select dialog closed");
+        }, 500);
+
         setSearchQuery("");
+        setSelectedTemplateId(null);
       } else {
         toast.error(result.message);
       }
     } catch (error) {
       console.error("Failed to apply template:", error);
       toast.error("An unexpected error occurred");
+    }
+  };
+  
+  // Handle template deletion
+  const handleDeleteTemplate = async () => {
+    if (!selectedTemplateId) {
+      toast.error("Please select a template to delete");
+      return;
+    }
+    
+    setIsDeleting(true);
+    
+    try {
+      const result = await deleteTemplate(selectedTemplateId);
+      
+      if (result.success) {
+        toast.success(result.message);
+        setSelectedTemplateId(null);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Failed to delete template:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -192,7 +228,7 @@ export default function TemplateSelector() {
       </Select>
 
       {/* Expand Template component */}
-      <Dialog>
+      <Dialog open={selectDialogOpen} onOpenChange={setSelectDialogOpen}>
         <DialogTrigger
           disabled={isDisabled}
           className="border rounded-md px-2 hover:text-blue-600 disabled:cursor-not-allowed"
@@ -203,18 +239,30 @@ export default function TemplateSelector() {
           <DialogHeader>
             <DialogTitle>Templates</DialogTitle>
             <DialogDescription>
-              Select a saved template to apply to your current configuration
+              Select a template first, then apply or delete it
             </DialogDescription>
           </DialogHeader>
 
-          <SearchForm
-            placeholder="Search templates..."
-            value={searchQuery}
-            onInputChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <div className="inline-flex gap-2 w-full">
+            <SearchForm
+              placeholder="Search templates..."
+              value={searchQuery}
+              onInputChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+            />
 
+            <Button 
+              variant="destructive" 
+              disabled={!selectedTemplateId || isDeleting}
+              onClick={handleDeleteTemplate}
+              className="flex-1"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          
           {/*Map Templates here*/}
-          <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-4 w-full overflow-y-auto">
+          <div className="rounded-md bg-foreground/5 border border-zinc-200 h-[300px] p-4 w-full overflow-y-auto">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -235,20 +283,15 @@ export default function TemplateSelector() {
                 {filteredTemplates.map((template) => (
                   <div
                     key={template.template_id || template.formula_id}
-                    className="p-2 pl-4 bg-background border rounded-md hover:bg-background/50 cursor-pointer flex justify-between items-center"
-                    onClick={() => handleSelectTemplate(template.template_id)}
+                    className={`flex items-center p-2 px-4 border rounded-md justify-between font-medium text-sm cursor-pointer hover:bg-muted gap-2 ${
+                      selectedTemplateId === template.template_id ? "bg-primary/10 border-primary" : "bg-background"
+                    }`}
+                    onClick={() => setSelectedTemplateId(template.template_id)}
                   >
-                    <p className="font-medium">{template.template_name}</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering the parent div's onClick
-                        handleSelectTemplate(template.template_id);
-                      }}
-                    >
-                      Apply
-                    </Button>
+                    {template.template_name}
+                    {selectedTemplateId === template.template_id && (
+                      <CheckIcon className="h-4 w-4 text-primary" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -262,6 +305,19 @@ export default function TemplateSelector() {
                 </p>
               </div>
             )}
+          </div>
+          
+          {/* Template action buttons moved to the bottom */}
+          <div className="flex justify-between gap-2 w-full">
+            <Button 
+              variant="default" 
+              disabled={!selectedTemplateId}
+              onClick={() => selectedTemplateId && handleSelectTemplate(selectedTemplateId)}
+              className="flex-1"
+            >
+              <CheckIcon className="h-4 w-4 mr-2" />
+              Apply Template
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -299,7 +355,7 @@ export default function TemplateSelector() {
                 "Saving..."
               ) : (
                 <>
-                  <CheckIcon className="w-4 h-4 mr-2" />
+               <CheckIcon className="w-4 h-4 mr-2" />
                   Save Template
                 </>
               )}

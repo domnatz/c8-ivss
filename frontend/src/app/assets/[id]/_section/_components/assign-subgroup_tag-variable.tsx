@@ -280,8 +280,9 @@ export default function AssignSubgroupTagVariable({
             )}
 
             {/* Save button */}
-            <div className="flex justify-end">
+            <div className="flex justify-end w-full">
               <Button 
+                className="w-full"
                 type="button"
                 disabled={!selectedTagId || isSaving}
                 onClick={handleSaveAssignment}

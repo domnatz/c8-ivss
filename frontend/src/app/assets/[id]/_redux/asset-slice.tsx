@@ -159,6 +159,14 @@ export const assetSlice = createSlice({
       };
     },
 
+    // Add removeFormula reducer for formula deletion
+    removeFormula: (state, action: PayloadAction<number>) => {
+      return {
+        ...state,
+        formulas: state.formulas.filter(formula => formula.formula_id !== action.payload),
+      };
+    },
+
     // Add the setSelectedFormulaId reducer
     setSelectedFormulaId: (state, action: PayloadAction<number | null>) => {
       state.selectedFormulaId = action.payload;

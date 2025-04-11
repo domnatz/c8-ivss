@@ -168,16 +168,23 @@ export default function SubgroupTagEdit({
     if (!selectedSubgroupTag || !variableId) return;
 
     try {
-      await removeVariableMapping(
-        selectedSubgroupTag.subgroup_tag_id,
-        variableId
-      );
-      // Update state after successful removal
+      // Find the mapping ID from the variableMappings
+      const mapping = variableMappings[variableId];
+      if (!mapping || !mapping.mapping_id) {
+        toast.error("Could not find mapping ID");
+        return;
+      }
+
+      // Use the mapping_id instead of subgroupTagId and variableId
+      await removeVariableMapping(mapping.mapping_id);
+
+      // Update state after successful removal to immediately reflect in the UI
       setVariableMappings((prev) => {
         const newMappings = { ...prev };
         delete newMappings[variableId];
         return newMappings;
       });
+
       toast.success("Tag assignment removed successfully");
     } catch (error) {
       console.error("Error removing variable mapping:", error);
@@ -309,7 +316,7 @@ export default function SubgroupTagEdit({
                           onClick={() =>
                             handleRemoveMapping(variable.variable_id!)
                           }
-                          className="p-1 hover:bg-blue-100 rounded-full"
+                          className="p-1 hover:bg-blue-100 rounded-full cursor-pointer"
                         >
                           <XMarkIcon className="w-4 h-4 text-blue-700" />
                         </button>

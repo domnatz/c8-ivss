@@ -17,9 +17,9 @@ export async function getVariableMappings(subgroupTagId: number) {
 /**
  * Remove variable mapping
  */
-export async function removeVariableMapping(subgroupTagId: number, variableId: number) {
+export async function removeVariableMapping(mappingId: number) {
   try {
-    return await formulaVariableService.removeVariableMapping(subgroupTagId, variableId);
+    return await formulaVariableService.removeVariableMapping(mappingId);
   } catch (error) {
     console.error("Error in removeVariableMapping action:", error);
     throw error;

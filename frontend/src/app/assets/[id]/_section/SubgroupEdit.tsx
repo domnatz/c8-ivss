@@ -218,7 +218,7 @@ export default function SubgroupEdit() {
         />
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="px-2 py-1 flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
+          <DropdownMenuTrigger className="px-2 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
             <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
             Sort
           </DropdownMenuTrigger>

@@ -1,5 +1,3 @@
-
-
 const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
 
 /**
@@ -28,13 +26,12 @@ export const formulaVariableService = {
 
   /**
    * Remove a variable mapping
-   * @param subgroupTagId The ID of the subgroup tag
-   * @param variableId The ID of the variable
+   * @param mappingId The ID of the variable mapping
    * @returns Promise with the operation result
    */
-  removeVariableMapping: async (subgroupTagId: number, variableId: number) => {
+  removeVariableMapping: async (mappingId: number) => {
     try {
-      const response = await fetch(`${BASE_URL}/subgroup-tags/${subgroupTagId}/variable-mappings/${variableId}`, {
+      const response = await fetch(`${BASE_URL}/variable-mappings/${mappingId}`, {
         method: 'DELETE',
       });
       

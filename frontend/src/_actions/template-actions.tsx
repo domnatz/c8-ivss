@@ -39,6 +39,27 @@ export const getTemplates = async (): Promise<Template[]> => {
   }
 };
 
+/**
+ * Delete a template by ID
+ */
+export const deleteTemplate = async (templateId: number): Promise<{ success: boolean; message: string }> => {
+  try {
+    console.log(`Action: deleteTemplate - Template ID: ${templateId}`);
+    await templateService.deleteTemplate(templateId);
+    return {
+      success: true,
+      message: "Template deleted successfully!"
+    };
+  } catch (error) {
+    console.error("Template deletion failed:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to delete template";
+    return {
+      success: false,
+      message: errorMessage
+    };
+  }
+};
+
 export const assignTemplate = async (
   templateId: number,
   subgroupTagId: number

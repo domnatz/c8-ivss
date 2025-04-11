@@ -22,7 +22,8 @@ import {
 import { assetAction } from "../../_redux/asset-slice";
 import { toast } from "react-toastify";
 import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, TrashIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { SearchForm } from "@/components/user/search-form";
 
 interface FormulaSectionProps {
   isDisabled?: boolean;
@@ -54,6 +55,12 @@ export default function FormulaSection({
   const isCreating = useAppSelector(
     (state) => state.assetState.isCreatingFormula
   );
+
+  // Additional states for formula selection and deletion
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedFormulaForDelete, setSelectedFormulaForDelete] = React.useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [selectedFormulaToApply, setSelectedFormulaToApply] = React.useState<Formula | null>(null);
 
   // Load formula when a subgroup tag is selected
   React.useEffect(() => {
@@ -229,6 +236,56 @@ export default function FormulaSection({
     }
   };
 
+  // Filter formulas based on search query
+  const filteredFormulas = React.useMemo(() => {
+    if (!searchQuery) return formulas;
+    return formulas.filter((formula) =>
+      formula.formula_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [formulas, searchQuery]);
+
+  // Handle formula deletion
+  const handleDeleteFormula = async () => {
+    if (!selectedFormulaForDelete) {
+      toast.error("Please select a formula to delete");
+      return;
+    }
+    
+    setIsDeleting(true);
+    
+    try {
+      await formulaService.deleteFormula(selectedFormulaForDelete);
+      
+      // Update local state to remove deleted formula
+      dispatch(assetAction.removeFormula(selectedFormulaForDelete));
+      
+      // Reset selection
+      setSelectedFormulaForDelete(null);
+      
+      toast.success("Formula deleted successfully");
+      
+      // If the deleted formula was the selected one, clear it
+      if (selectedFormulaForDelete === useAppSelector((state) => state.assetState.selectedFormulaId)) {
+        dispatch(assetAction.setFormulaInput(""));
+        dispatch(assetAction.setSelectedFormulaId(null));
+      }
+    } catch (error) {
+      console.error("Error deleting formula:", error);
+      toast.error("Failed to delete formula");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // New function to apply the selected formula
+  const handleApplySelectedFormula = () => {
+    if (selectedFormulaToApply) {
+      handleSelectFormula(selectedFormulaToApply);
+    } else {
+      toast.error("Please select a formula to apply");
+    }
+  };
+
   return (
     <div className="inline-flex flex-row w-full gap-2 items-center mb-2">
       <div className="flex w-full justify-between items-center p-2 bg-background rounded-md border border-input">
@@ -270,33 +327,77 @@ export default function FormulaSection({
                   calculation.
                 </DialogDescription>
               </DialogHeader>
+              
+              <div className="inline-flex gap-2 w-full">
+                <SearchForm
+                  placeholder="Search formulas..."
+                  value={searchQuery}
+                  onInputChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+                
+                <Button 
+                  variant="destructive" 
+                  disabled={!selectedFormulaForDelete || isDeleting}
+                  onClick={handleDeleteFormula}
+                  className="flex-1"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <div className="max-h-[50vh] overflow-y-auto">
                 {formulasLoading ? (
                   <div className="py-4 text-center text-muted-foreground">
                     Loading formulas...
                   </div>
-                ) : formulas.length > 0 ? (
+                ) : filteredFormulas.length > 0 ? (
                   <div className="flex flex-col gap-2">
-                    {formulas.map((formula) => (
+                    {filteredFormulas.map((formula) => (
                       <div
                         key={formula.formula_id}
-                        className="flex items-center justify-between p-2 bg-background rounded-md border border-zinc-200 hover:bg-muted transition-colors cursor-pointer"
-                        onClick={() => handleSelectFormula(formula)}
+                        className={`flex items-center p-2 px-4 border rounded-md justify-between font-medium text-sm cursor-pointer hover:bg-muted ${
+                          selectedFormulaToApply?.formula_id === formula.formula_id 
+                            ? "bg-primary/10 border-primary" 
+                            : "border-zinc-200 bg-background"
+                        } transition-colors`}
+                        onClick={() => setSelectedFormulaToApply(formula)}
                       >
-                        <span className="font-medium">
-                          {formula.formula_name}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {formula.formula_expression}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {formula.formula_name}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {formula.formula_expression}
+                          </span>
+                        </div>
+                        {selectedFormulaToApply?.formula_id === formula.formula_id && (
+                          <CheckIcon className="h-4 w-4 text-primary" />
+                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="py-4 text-center text-muted-foreground">
-                    No formulas found. Create one first.
+                    {searchQuery ? 
+                      "No formulas match your search." :
+                      "No formulas found. Create one first."
+                    }
                   </div>
                 )}
+              </div>
+
+              {/* Formula action button at the bottom */}
+              <div className="flex justify-between gap-2 w-full">
+                <Button 
+                  variant="default" 
+                  disabled={!selectedFormulaToApply}
+                  onClick={handleApplySelectedFormula}
+                  className="flex-1"
+                >
+                  <CheckIcon className="h-4 w-4 mr-2" />
+                  Apply Formula
+                </Button>
               </div>
             </DialogContent>
           </Dialog>

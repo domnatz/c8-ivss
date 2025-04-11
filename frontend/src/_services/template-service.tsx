@@ -55,6 +55,24 @@ export const getTemplates = async (): Promise<Template[]> => {
   return data;
 };
 
+/**
+ * Delete a template by ID
+ */
+export const deleteTemplate = async (templateId: number): Promise<any> => {
+  console.log(`API call: deleteTemplate - Template ID: ${templateId}`);
+  
+  const response = await fetch(`${API_URL}/templates/${templateId}`, {
+    method: "DELETE",
+  });
+  
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to delete template with ID: ${templateId}`);
+  }
+  
+  return { success: true };
+};
+
 export const assignTemplateToSubgroupTag = async (
   templateId: number,
   subgroupTagId: number
