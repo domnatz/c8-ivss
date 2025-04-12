@@ -18,6 +18,7 @@ export async function createFormula(formula: Omit<Formula, 'formula_id'>): Promi
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(formula),
+    next: { tags: ['formulas'] },
   });
   
   if (!response.ok) {

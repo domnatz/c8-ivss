@@ -1,5 +1,9 @@
+'use server';
+
 import * as templateService from "@/_services/template-service";
 import { Template } from "@/models/template";
+import { revalidateTag } from 'next/cache';
+import { formulaClientService } from "@/_actions/formula-actions"; // Import formula service
 
 /**
  * Save a template and return a simplified result
@@ -63,16 +67,23 @@ export const deleteTemplate = async (templateId: number): Promise<{ success: boo
 export const assignTemplate = async (
   templateId: number,
   subgroupTagId: number
-): Promise<{ success: boolean; message: string; formula_id?: number }> => {
+): Promise<{ success: boolean; message: string; formula_id?: number; formula_expression?: string }> => {
   try {
     console.log(`Action: assignTemplate - Template ID: ${templateId}, Tag ID: ${subgroupTagId}`);
     const result = await templateService.assignTemplateToSubgroupTag(templateId, subgroupTagId);
     console.log("Template assigned:", result);
-    
+
+    // Revalidate formulas cache
+    revalidateTag('formulas');
+
+    // Fetch the updated formula and return it to the client
+    const updatedFormula = await formulaClientService.getFormulaBySubgroupTagId(subgroupTagId);
+
     return {
       success: true,
       message: "Template applied successfully!",
-      formula_id: result.formula_id
+      formula_id: updatedFormula?.formula_id,
+      formula_expression: updatedFormula?.formula_expression, // Include formula expression for client-side updates
     };
   } catch (error) {
     console.error("Template assignment failed:", error);

@@ -1,24 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { SearchForm } from "@/components/user/search-form";
 import {
-  AdjustmentsVerticalIcon,
   CheckIcon,
   DocumentCheckIcon,
   TagIcon,
   XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
@@ -42,10 +31,6 @@ interface SubgroupTagEditProps {
 export default function SubgroupTagEdit({
   selectedSubgroupTag,
 }: SubgroupTagEditProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">(
-    "newest"
-  );
   const params = useParams();
   const dispatch = useAppDispatch();
   const [formulaVariables, setFormulaVariables] = React.useState<
@@ -215,20 +200,6 @@ export default function SubgroupTagEdit({
     }
   };
 
-  // Filter child tags based on search query
-  const filteredChildTags = childTags.filter((tag) =>
-    tag.subgroup_tag_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Sort child tags based on sortOrder
-  const sortedChildTags = [...filteredChildTags].sort((a, b) => {
-    if (sortOrder === "newest") {
-      return b.subgroup_tag_id - a.subgroup_tag_id;
-    } else {
-      return a.subgroup_tag_id - b.subgroup_tag_id;
-    }
-  });
-
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start gap-1">
@@ -247,32 +218,6 @@ export default function SubgroupTagEdit({
             )}
           </h2>
         </div>
-      </div>
-
-      <div className="w-full flex flex-row items-center gap-2">
-        <SearchForm
-          className="w-full"
-          value={searchQuery}
-          onInputChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Filter tags..."
-        />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger className="px-2 py-1 h-full flex items-center gap-1 border border-zinc-200 rounded-md text-foreground text-sm">
-            <AdjustmentsVerticalIcon className="w-4 h-4 text-foreground" />
-            Sort
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Sort By</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSortOrder("newest")}>
-              Newest Added
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortOrder("oldest")}>
-              Oldest Added
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="w-full ">

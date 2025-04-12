@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { assetAction } from "../../_redux/asset-slice";
 import { toast } from "react-toastify";
 
+
 export default function TemplateSelector() {
   const dispatch = useAppDispatch();
 
@@ -91,14 +92,15 @@ export default function TemplateSelector() {
       // Show loading state
       toast.info("Applying template...");
       
-      // Call the action to assign the template, passing the current subgroup tag ID
+      // Call the action to assign the template
       const result = await assignTemplate(templateId, subgroupTag.subgroup_tag_id);
       
       if (result.success) {
         toast.success(result.message);
         
-        // Update the selected formula in Redux state if formula_id is returned
-        if (result.formula_id) {
+        // Update the Redux state with the new formula
+        if (result.formula_expression && result.formula_id) {
+          dispatch(assetAction.setFormulaInput(result.formula_expression));
           dispatch(assetAction.setSelectedFormulaId(result.formula_id));
         }
         

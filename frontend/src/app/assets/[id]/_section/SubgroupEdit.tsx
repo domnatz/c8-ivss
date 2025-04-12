@@ -198,7 +198,7 @@ export default function SubgroupEdit() {
           </span>
         </h2>
 
-        <Button
+        {/* <Button
           variant="outline"
           size="sm"
           onClick={handleAddSubgroup}
@@ -206,7 +206,7 @@ export default function SubgroupEdit() {
         >
           <PlusCircleIcon className="w-4 h-4 mr-1" />
           Add Subgroup
-        </Button>
+        </Button> */}
       </div>
 
       <div className="w-full flex flex-row items-center gap-2">

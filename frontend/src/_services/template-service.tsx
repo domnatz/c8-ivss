@@ -3,6 +3,7 @@
  * Handles all API calls related to templates
  */
 import { Template } from "@/models/template";
+import { revalidateTag } from "next/cache";
 
 // Base API URL
 const API_URL = "http://localhost:8000/api";
@@ -88,11 +89,12 @@ export const assignTemplateToSubgroupTag = async (
       template_id: templateId,
       subgroup_tag_id: subgroupTagId,
     }),
+    next: { tags: ["subgroup_tags"] }, // Revalidate the cache for this tag
   });
 
   const data = await response.json();
   console.log("API response:", data);
-
+  
   if (!response.ok) {
     throw new Error(data.detail || "Failed to assign template");
   }

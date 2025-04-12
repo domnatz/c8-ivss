@@ -43,7 +43,6 @@ export function AddAssetButton({ className, disabled, onAssetAdded }: AddAssetBu
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
       <div
         className={`flex justify-between w-full items-center pl-4 pr-2 border-y-[0.5px] border-zinc-300 ${
           className || ""
