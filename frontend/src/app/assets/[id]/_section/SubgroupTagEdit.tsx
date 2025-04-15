@@ -203,7 +203,7 @@ export default function SubgroupTagEdit({
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start gap-1">
-        <div className="flex flex-wrap gap-2 sm:flex-row justify-between w-full">
+        <div className="flex flex-col justify-between w-full">
           <h2 className="text-lg font-semibold flex flex-row items-center gap-2">
             Tag Editor
             {/* Display selected subgroup tag name */}
@@ -217,13 +217,16 @@ export default function SubgroupTagEdit({
               </span>
             )}
           </h2>
+          <span className="text-xs text-muted-foreground">
+            Select a formula and assign tags to its variables
+          </span>
         </div>
       </div>
 
       <div className="w-full ">
         <TemplateSelector />
       </div>
-      
+
       {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTag ? (

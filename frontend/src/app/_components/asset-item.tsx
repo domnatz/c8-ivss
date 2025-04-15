@@ -96,19 +96,21 @@ export function AssetItem({
     <Collapsible
       open={isOpen}
       onOpenChange={() => onToggle(asset.asset_id)}
-      className="group/collapsible border-b-[0.5px] border-zinc-300"
+      className={`group/collapsible border-b-[0.5px] border-zinc-300 ${
+        isOpen ? "bg-blue-50 border-l-4 border-l-blue-600" : ""
+      }`}
     >
-      <SidebarGroup className="px-0 py-0">
+      <SidebarGroup className="px-0 py-0 ">
         <SidebarGroupLabel
           asChild
-          className={`group/label text-sm text-sidebar-foreground`}
+          className={`group/label text-sm  ${
+            isOpen ? "text-blue-600 font-medium" : "text-sidebar-foreground"
+          }`}
         >
           <div>
             <CollapsibleTrigger
-              className={`flex w-full items-center justify-between px-2 py-1 rounded-md ${
-                isOpen
-                  ? "bg-orange-50 text-[#FF5B1A] font-medium"
-                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className={`flex w-full cursor-pointer items-center justify-between px-2 py-1 rounded-md ${
+                !isOpen && " hover:bg-background/0 hover:text-blue-600"
               }`}
               onClick={() => {
                 // Only navigate if not in edit mode
@@ -118,9 +120,7 @@ export function AssetItem({
               }}
             >
               <div className="flex items-center justify-center">
-                <CubeIcon
-                  className={`w-5 h-5 pr-1 ${isOpen ? "text-[#FF5B1A]" : ""}`}
-                />
+                <CubeIcon className="w-5 h-5 pr-1" />
                 <div className="flex items-center w-fit">
                   <Input
                     value={inputValue}
@@ -143,9 +143,7 @@ export function AssetItem({
                       }
                       dispatch(rootActions.editingAssetIdSet(asset.asset_id));
                     }}
-                    className={`border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 ${
-                      isOpen ? "text-[#FF5B1A] font-medium" : ""
-                    }`}
+                    className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0"
                     onClick={(e) => e.stopPropagation()}
                   />
                   {state.editingAssetId === asset.asset_id && (
@@ -160,9 +158,7 @@ export function AssetItem({
                 </div>
               </div>
               <ChevronRight
-                className={`ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90 ${
-                  isOpen ? "text-[#FF5B1A]" : ""
-                }`}
+                className="ml-auto w-4 h-4 transition-transform group-data-[state=open]/collapsible:rotate-90"
               />
             </CollapsibleTrigger>
           </div>
@@ -173,6 +169,7 @@ export function AssetItem({
               assetId={asset.asset_id}
               subgroups={asset.subgroups || []}
               onSubgroupChange={onAssetChange}
+              className={isOpen ? "text-blue-600" : ""}
             />
           </SidebarGroupContent>
         </CollapsibleContent>

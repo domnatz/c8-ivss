@@ -5,6 +5,7 @@ import {
   PlusIcon,
   ArrowTurnDownRightIcon,
   CheckIcon,
+  CubeTransparentIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,10 +24,12 @@ export function SubgroupList({
   assetId,
   subgroups,
   onSubgroupChange,
+  className = "",
 }: {
   assetId: number;
   subgroups: Subgroup[];
   onSubgroupChange: () => void;
+  className?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const dispatch = useAppDispatch();
@@ -98,17 +101,19 @@ export function SubgroupList({
   };
 
   return (
-    <SidebarMenu>
-      <div className="flex flex-row px-4 pr-2 items-center font-semibold border-b-1 text-xs justify-between w-full ">
+    <SidebarMenu className={className}>
+      <div
+        className={`flex flex-row px-4 pr-1.5 items-center font-semibold border-b-1 text-xs justify-between w-full ${className}`}
+      >
         <span className="text-md">Subgroups</span>
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-md"
+          className="rounded-md bg-background/0 hover:text-blue-300 hover:bg-background/0 cursor-pointer"
           onClick={handleAddSubgroup}
           disabled={isPending}
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="w-4 h-4" />
         </Button>
       </div>
 
@@ -123,10 +128,11 @@ export function SubgroupList({
               : subgroup.subgroup_name;
 
           return (
-            <SidebarMenuItem key={subgroup.subgroup_id}>
+            <SidebarMenuItem key={subgroup.subgroup_id} className={className}>
               <SidebarMenuButton asChild>
                 <div className="flex items-center justify-start w-full pl-8">
                   <div className="flex items-center w-fit ">
+                    <CubeTransparentIcon className="w-4 h-4 mr-1" />
                     <Input
                       value={inputValue}
                       onChange={(e) => {
@@ -153,7 +159,7 @@ export function SubgroupList({
                         }
                         dispatch(rootActions.editingSubgroupIdSet(subgroupKey));
                       }}
-                      className="border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium "
+                      className={`border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium ${className}`}
                       onClick={(e) => e.stopPropagation()}
                     />
                     {isEditing && (
@@ -164,7 +170,7 @@ export function SubgroupList({
                           handleSubmitSubgroupRename(subgroup.subgroup_id, e)
                         }
                       >
-                        <CheckIcon className="w-4 h-4 text-green-600" />
+                        <CheckIcon className="w-4 h-4 text-green-600 cursor-pointer" />
                       </div>
                     )}
                   </div>

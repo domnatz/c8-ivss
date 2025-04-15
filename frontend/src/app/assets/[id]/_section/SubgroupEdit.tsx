@@ -272,7 +272,7 @@ export default function SubgroupEdit() {
                     variant="outline"
                     className={`flex items-center cursor-pointer justify-between gap-2 ${
                       tag.subgroup_tag_id === selectedTagId
-                        ? "bg-orange-50 text-orange-600"
+                        ? "bg-blue-50 text-blue-600 border-blue-200"
                         : ""
                     }`}
                     onClick={() => handleTagClick(tag)}
