@@ -1,6 +1,6 @@
 import { createSubgroup } from "./asset-actions";
 import { getAssetById } from "@/_services/asset-service";
-import { addTagToSubgroup } from "@/_services/subgroup-service";
+import { addTagToSubgroup, deleteSubgroup } from "@/_services/subgroup-service";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 
 interface ActionResult<T = any> {
@@ -69,6 +69,32 @@ export async function addTagToSubgroupAction(
     return { 
       success: false, 
       error: "Failed to add tag to subgroup" 
+    };
+  }
+}
+
+export async function deleteSubgroupAction(
+  subgroupId: number
+): Promise<ActionResult> {
+  try {
+    const response = await deleteSubgroup(subgroupId);
+    
+    if (response.ok) {
+      return {
+        success: true,
+      };
+    } else {
+      const errorText = await response.text();
+      return { 
+        success: false, 
+        error: `Failed to delete subgroup: ${errorText}` 
+      };
+    }
+  } catch (error) {
+    console.error("Error deleting subgroup:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to delete subgroup" 
     };
   }
 }

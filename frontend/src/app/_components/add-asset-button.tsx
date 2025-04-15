@@ -44,7 +44,7 @@ export function AddAssetButton({ className, disabled, onAssetAdded }: AddAssetBu
   return (
     <>
       <div
-        className={`flex justify-between w-full items-center pl-4 pr-2 border-y-[0.5px] border-zinc-300 ${
+        className={`flex justify-between w-full items-center pl-4 pr-1.5 border-y-[0.5px] border-zinc-300 ${
           className || ""
         }`}
       >
@@ -64,7 +64,7 @@ export function AddAssetButton({ className, disabled, onAssetAdded }: AddAssetBu
             }}
             disabled={disabled}
           >
-            <PlusIcon className="w-5 h-5" />
+            <PlusIcon className="w-4 h-4" />
           </Button>
         </form>
       </div>

@@ -31,3 +31,19 @@ export async function fetchTagsBySubgroupId(
     throw new Error(`Failed to fetch tags: ${errorText}`); // Include error text in the error message
   }
 }
+
+export async function deleteSubgroup(subgroupId: number) {
+  const response = await fetch(`${BASE_URL}/subgroups/${subgroupId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to delete subgroup: ${errorText}`);
+  }
+  
+  return response;
+}

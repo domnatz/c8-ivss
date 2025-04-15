@@ -1,11 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import {
   PlusIcon,
   ArrowTurnDownRightIcon,
   CheckIcon,
   CubeTransparentIcon,
+  EllipsisHorizontalIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +17,14 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { createSubgroup, updateSubgroupName } from "@/_actions/asset-actions";
+import { deleteSubgroupAction } from "@/_actions/subgroup-actions";
 import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { rootActions } from "@/app/_redux/root-slice";
@@ -100,12 +110,39 @@ export function SubgroupList({
     }
   };
 
+  const startRenameSubgroup = (subgroupId: number, currentName: string) => {
+    const subgroupKey = `${assetId}-${subgroupId}`;
+    dispatch(
+      rootActions.editingValueChanged({
+        key: `subgroup-${subgroupKey}`,
+        value: currentName,
+      })
+    );
+    dispatch(rootActions.editingSubgroupIdSet(subgroupKey));
+  };
+
+  const handleDeleteSubgroup = (subgroupId: number) => {
+    startTransition(async () => {
+      try {
+        const result = await deleteSubgroupAction(subgroupId);
+        if (result.success) {
+          toast.success("Subgroup deleted successfully");
+          onSubgroupChange();
+        } else {
+          toast.error(`Failed to delete subgroup: ${result.error}`);
+        }
+      } catch (error) {
+        toast.error("An error occurred while deleting the subgroup");
+      }
+    });
+  };
+
   return (
     <SidebarMenu className={className}>
       <div
-        className={`flex flex-row px-4 pr-1.5 items-center font-semibold border-b-1 text-xs justify-between w-full ${className}`}
+        className={`flex flex-row px-4 pr-1.5 items-center font-semibold border-b-1 justify-between w-full ${className}`}
       >
-        <span className="text-md">Subgroups</span>
+        <span className="text-sm">Subgroups</span>
         <Button
           variant="ghost"
           size="sm"
@@ -129,51 +166,90 @@ export function SubgroupList({
 
           return (
             <SidebarMenuItem key={subgroup.subgroup_id} className={className}>
-              <SidebarMenuButton asChild>
-                <div className="flex items-center justify-start w-full pl-8">
-                  <div className="flex items-center w-fit ">
+              <SidebarMenuButton asChild className="hover:bg-background/0 hover:text-blue-600">
+                <div className="flex items-center justify-between w-full pl-8 pr-2">
+                  <div className="flex items-center">
                     <CubeTransparentIcon className="w-4 h-4 mr-1" />
-                    <Input
-                      value={inputValue}
-                      onChange={(e) => {
-                        handleSubgroupInputChange(
-                          subgroup.subgroup_id,
-                          e.target.value
-                        );
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSubmitSubgroupRename(subgroup.subgroup_id);
-                        } else if (e.key === "Escape") {
-                          dispatch(rootActions.editingCleared());
-                        }
-                      }}
-                      onFocus={() => {
-                        if (!state.editingValues[`subgroup-${subgroupKey}`]) {
-                          dispatch(
-                            rootActions.editingValueChanged({
-                              key: `subgroup-${subgroupKey}`,
-                              value: subgroup.subgroup_name,
-                            })
-                          );
-                        }
-                        dispatch(rootActions.editingSubgroupIdSet(subgroupKey));
-                      }}
-                      className={`border-none bg-transparent p-0 w-fit h-fit shadow-none focus:ring-0 font-medium ${className}`}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    {isEditing && (
-                      <div
-                        role="button"
-                        className="ml-1 p-1 h-auto inline-flex items-center justify-center text-sm font-medium hover:bg-accent/50 hover:text-accent-foreground rounded-sm"
-                        onClick={(e) =>
-                          handleSubmitSubgroupRename(subgroup.subgroup_id, e)
-                        }
-                      >
-                        <CheckIcon className="w-4 h-4 text-green-600 cursor-pointer" />
-                      </div>
-                    )}
+                    <div className="flex items-center">
+                      <Input
+                        value={inputValue}
+                        readOnly={!isEditing}
+                        onChange={(e) => {
+                          if (isEditing) {
+                            handleSubgroupInputChange(
+                              subgroup.subgroup_id,
+                              e.target.value
+                            );
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (isEditing) {
+                            if (e.key === "Enter") {
+                              handleSubmitSubgroupRename(subgroup.subgroup_id);
+                            } else if (e.key === "Escape") {
+                              dispatch(rootActions.editingCleared());
+                            }
+                          }
+                        }}
+                        onFocus={(e) => {
+                          if (!isEditing) {
+                            e.target.blur();
+                          }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isEditing) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className={`border-none bg-transparent p-0 w-fit h-fit shadow-none rounded-xs font-medium 
+                          ${isEditing 
+                            ? 'border-b border-gray-300 cursor-text' 
+                            : 'cursor-default pointer-events-none'} 
+                          ${className}`}
+                      />
+                      
+                      {isEditing && (
+                        <div
+                          role="button"
+                          className="ml-1 p-1 h-auto inline-flex items-center justify-center text-sm font-medium hover:bg-accent/50 hover:text-accent-foreground rounded-sm"
+                          onClick={(e) =>
+                            handleSubmitSubgroupRename(subgroup.subgroup_id, e)
+                          }
+                        >
+                          <CheckIcon className="w-4 h-4 text-green-600 cursor-pointer" />
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="p-0">
+                        <EllipsisHorizontalIcon className="w-4 h-4 text-blue-400 cursor-pointer" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startRenameSubgroup(subgroup.subgroup_id, subgroup.subgroup_name);
+                        }}
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                        <span>Rename</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSubgroup(subgroup.subgroup_id);
+                        }}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        <span>Delete</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
