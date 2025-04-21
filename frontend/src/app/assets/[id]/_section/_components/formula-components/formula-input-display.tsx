@@ -7,7 +7,12 @@ import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
 import { formulaClientService } from "@/_actions/formula-actions";
 import { toast } from "react-toastify";
 import { Skeleton } from "@/components/ui/skeleton";
-import { assignTemplate } from "@/_actions/template-actions"; // Import the updated assignTemplate
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface FormulaDisplayProps {
   isDisabled?: boolean;
@@ -83,19 +88,28 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
   };
 
   return (
-    <div className="flex w-full justify-between items-center bg-background rounded-md border border-input">
-      <div className="truncate text-sm flex-1 p-2">
+    <div className="flex w-full justify-between items-center bg-background rounded-md border border-input" style={{ minWidth: "200px" }}>
+      <div className="truncate text-sm flex-1 p-2 overflow-hidden">
         {isLoading ? (
           <Skeleton className="h-4 rounded-xs w-full" />
         ) : formulaInput ? (
-          <span className="font-medium pl-2">{formulaInput}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-medium pl-2 block truncate">{formulaInput}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{formulaInput}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           <span className="text-muted-foreground pl-2">
             Select or create a formula...
           </span>
         )}
       </div>
-      <div className="flex gap-2 pr-1">
+      <div className="flex-shrink-0 flex gap-2 pr-1">
         {formulaInput && !isLoading && (
           <Button
             variant="ghost"

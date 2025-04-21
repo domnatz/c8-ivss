@@ -23,6 +23,12 @@ import {
   getVariableMappings,
   removeVariableMapping,
 } from "@/_actions/formula-variable-actions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -204,14 +210,14 @@ export default function SubgroupTagEdit({
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start gap-1">
         <div className="flex flex-col justify-between w-full">
-          <h2 className="text-lg font-semibold flex flex-row items-center gap-2">
+          <h2 className="text-lg font-semibold flex flex-wrap items-center gap-2">
             Tag Editor
             {/* Display selected subgroup tag name */}
             {selectedSubgroupTag && (
-              <span className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 p-1 pl-4 pr-2  rounded-full ">
+              <span className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 p-1 pl-4 pr-2 min-w-[150px] rounded-full overflow-hidden">
                 {selectedSubgroupTag.subgroup_tag_name}
                 <XCircleIcon
-                  className="w-4 h-4 cursor-pointer hover:text-blue-800"
+                  className="w-4 h-4 cursor-pointer hover:text-blue-800 flex-shrink-0"
                   onClick={handleDeselectTag}
                 />
               </span>
@@ -247,24 +253,37 @@ export default function SubgroupTagEdit({
                     key={index}
                     className="inline-flex w-full items-center gap-2"
                   >
-                    <div className="p-2 text-sm border border-border rounded-md bg-background font-medium w-[100px]">
+                    <div className="p-2 text-sm border border-border rounded-md bg-background font-medium w-fit">
                       {variable.variable_name}
                     </div>
                     <span>=</span>
                     {variable.variable_id &&
                     variableMappings[variable.variable_id] ? (
-                      <div className="flex items-center gap-2 p-2 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700 flex-grow">
-                        <TagIcon className="w-4 h-4" />
-                        <span className="flex-grow">
-                          {getTagNameFromMapping(
-                            variableMappings[variable.variable_id]
-                          )}
-                        </span>
+                      <div className="flex items-center gap-2 p-2 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700 flex-grow min-w-0">
+                        <TagIcon className="w-4 h-4 flex-shrink-0" />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex-grow truncate overflow-hidden text-ellipsis">
+                                {getTagNameFromMapping(
+                                  variableMappings[variable.variable_id]
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {getTagNameFromMapping(
+                                  variableMappings[variable.variable_id]
+                                )}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <button
                           onClick={() =>
                             handleRemoveMapping(variable.variable_id!)
                           }
-                          className="p-1 hover:bg-blue-100 rounded-full cursor-pointer"
+                          className="p-1 hover:bg-blue-100 rounded-full cursor-pointer flex-shrink-0"
                         >
                           <XMarkIcon className="w-4 h-4 text-blue-700" />
                         </button>

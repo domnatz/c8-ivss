@@ -77,9 +77,13 @@ export default function AssetDetails() {
 
   return (
     <div className="mt-2 w-full h-full">
-      <div className="flex flex-col sm:flex-row gap-4 grid-cols-2 h-full">
-        <SubgroupEdit />
-        <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />
+      <div className="flex flex-col sm:flex-row gap-4 h-full overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-auto">
+          <SubgroupEdit />
+        </div>
+        <div className="flex-1 min-w-0 overflow-auto">
+          <SubgroupTagEdit selectedSubgroupTag={selectedSubgroupTag} />
+        </div>
       </div>
     </div>
   );
