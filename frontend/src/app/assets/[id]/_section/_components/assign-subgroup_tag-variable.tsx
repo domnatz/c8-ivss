@@ -15,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PlusCircleIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { useAppSelector } from "@/hooks/hooks";
 import { useEffect, useState } from "react";
@@ -253,18 +259,29 @@ export default function AssignSubgroupTagVariable({
                     Loading tags...
                   </p>
                 ) : filteredTags.length > 0 ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 max-w-full min-w-full">
                     {filteredTags.map((tag) => (
                       <div
                         key={tag.subgroup_tag_id}
-                        className={`flex items-center p-2 px-4 border rounded-md justify-between font-medium text-sm cursor-pointer hover:bg-muted gap-2 ${
+                        className={`flex items-center p-2 px-4 border rounded-md justify-between font-medium text-sm cursor-pointer hover:bg-muted gap-2 w-full ${
                           selectedTagId === tag.subgroup_tag_id ? "bg-primary/10 border-primary" : "bg-background"
                         }`}
                         onClick={() => handleSelectTag(tag)}
                       >
-                        {tag.subgroup_tag_name}
+                        <div className="flex-1 overflow-hidden w-0">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block truncate text-left">{tag.subgroup_tag_name}</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[300px]">
+                                <p className="break-all">{tag.subgroup_tag_name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         {selectedTagId === tag.subgroup_tag_id && (
-                          <CheckIcon className="h-4 w-4 text-primary" />
+                          <CheckIcon className="h-4 w-4 text-primary flex-shrink-0" />
                         )}
                       </div>
                     ))}

@@ -123,7 +123,7 @@ export function TagDetails({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-lg lg:w-fit p-4 sm:p-6">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Tags</DialogTitle>
           <DialogDescription>
@@ -152,11 +152,11 @@ export function TagDetails({
                   }`}
                   onClick={() => toggleTagSelection(tag.tag_id)}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex-1 overflow-hidden w-0">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="font-medium truncate max-w-[220px] sm:max-w-[250px] md:max-w-[400px]">{tag.tag_name}</span>
+                          <span className="block truncate font-medium">{tag.tag_name}</span>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <p>{tag.tag_name}</p>
