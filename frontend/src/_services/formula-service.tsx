@@ -2,9 +2,12 @@
 
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
+// Define base URL for API calls
+const BASE_URL = `${process.env.BASE_URL || "http://localhost:8000/api"}`;
+
 // Define the server-side formula actions
 export async function getAllFormulas(): Promise<Formula[]> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas`);
+  const response = await fetch(`${BASE_URL}/formulas`);
   if (!response.ok) {
     throw new Error('Failed to fetch formulas');
   }
@@ -12,7 +15,7 @@ export async function getAllFormulas(): Promise<Formula[]> {
 }
 
 export async function createFormula(formula: Omit<Formula, 'formula_id'>): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas`, {
+  const response = await fetch(`${BASE_URL}/formulas`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -28,7 +31,7 @@ export async function createFormula(formula: Omit<Formula, 'formula_id'>): Promi
 }
 
 export async function getFormulaById(formulaId: number): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`);
+  const response = await fetch(`${BASE_URL}/formulas/${formulaId}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch formula with ID ${formulaId}`);
   }
@@ -36,7 +39,7 @@ export async function getFormulaById(formulaId: number): Promise<Formula> {
 }
 
 export async function updateFormula(formulaId: number, formula: Omit<Formula, 'formula_id'>): Promise<Formula> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`, {
+  const response = await fetch(`${BASE_URL}/formulas/${formulaId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -52,7 +55,7 @@ export async function updateFormula(formulaId: number, formula: Omit<Formula, 'f
 }
 
 export async function deleteFormula(formulaId: number): Promise<void> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}`, {
+  const response = await fetch(`${BASE_URL}/formulas/${formulaId}`, {
     method: 'DELETE',
   });
   
@@ -62,7 +65,7 @@ export async function deleteFormula(formulaId: number): Promise<void> {
 }
 
 export async function getFormulaVariables(formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/variables`);
+  const response = await fetch(`${BASE_URL}/formulas/${formulaId}/variables`);
   if (!response.ok) {
     throw new Error(`Failed to fetch variables for formula with ID ${formulaId}`);
   }
@@ -75,7 +78,7 @@ export const getFormulaVariablesWithMappings = async (
 ): Promise<any[]> => {
   try {
     const response = await fetch(
-      `${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
+      `${BASE_URL}/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
     );
     
     if (!response.ok) {
@@ -91,7 +94,7 @@ export const getFormulaVariablesWithMappings = async (
 };
 
 export async function getFormulaBySubgroupTagId(subgroupTagId: number): Promise<any> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/subgroup-tags/${subgroupTagId}/formula`);
+  const response = await fetch(`${BASE_URL}/subgroup-tags/${subgroupTagId}/formula`);
   if (!response.ok) {
     throw new Error(`Failed to fetch formula for subgroup tag with ID ${subgroupTagId}`);
   }
@@ -99,7 +102,7 @@ export async function getFormulaBySubgroupTagId(subgroupTagId: number): Promise<
 }
 
 export async function evaluateFormula(evaluation: FormulaEvaluation): Promise<FormulaEvaluation> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/evaluate`, {
+  const response = await fetch(`${BASE_URL}/formulas/evaluate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -114,7 +117,7 @@ export async function evaluateFormula(evaluation: FormulaEvaluation): Promise<Fo
 }
 
 export async function getFormulaTemplates(formulaId: number): Promise<Template[]> {
-  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/templates`);
+  const response = await fetch(`${BASE_URL}/formulas/${formulaId}/templates`);
   if (!response.ok) {
     throw new Error(`Failed to fetch templates for formula with ID ${formulaId}`);
   }
