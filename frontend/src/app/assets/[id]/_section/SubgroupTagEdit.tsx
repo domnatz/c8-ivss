@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getTagNameFromMapping } from "@/utils/tag-utils";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -180,29 +181,6 @@ export default function SubgroupTagEdit({
     } catch (error) {
       console.error("Error removing variable mapping:", error);
       toast.error("Failed to remove tag assignment");
-    }
-  };
-
-  // Helper function to safely get the tag name from a mapping
-  const getTagNameFromMapping = (mapping: any): string => {
-    // Log the mapping to see its structure
-    console.log("Getting tag name from mapping:", mapping);
-
-    if (!mapping) return "Unknown Tag";
-
-    // Check all possible paths where the tag name might be
-    if (mapping.mapped_tag_name) return mapping.mapped_tag_name;
-    if (mapping.assigned_tag?.subgroup_tag_name)
-      return mapping.assigned_tag.subgroup_tag_name;
-    if (mapping.tag_name) return mapping.tag_name;
-    if (mapping.subgroup_tag_name) return mapping.subgroup_tag_name;
-    if (mapping.name) return mapping.name;
-
-    // If we get this far, try to stringify the whole object for debugging
-    try {
-      return `Tag: ${JSON.stringify(mapping)}`;
-    } catch {
-      return "Assigned Tag";
     }
   };
 
