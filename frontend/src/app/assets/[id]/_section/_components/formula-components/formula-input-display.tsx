@@ -4,7 +4,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { assetAction } from "../../../_redux/asset-slice";
 import { updateSubgroupTagFormula } from "@/_actions/subgroup-tag-actions";
-import { formulaClientService } from "@/_actions/formula-actions";
+import { fetchFormulaBySubgroupTagId } from "@/_actions/formula-actions";
 import { toast } from "react-toastify";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -36,10 +36,10 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
       if (selectedSubgroupTag?.subgroup_tag_id && selectedSubgroupTag?.formula_id) {
         try {
           setIsLoading(true);
-          const formulaData = await formulaClientService.getFormulaBySubgroupTagId(selectedSubgroupTag.subgroup_tag_id);
-          if (formulaData && formulaData.formula_expression) {
-            dispatch(assetAction.setFormulaInput(formulaData.formula_expression));
-            dispatch(assetAction.setSelectedFormulaId(formulaData.formula_id));
+          const result = await fetchFormulaBySubgroupTagId(selectedSubgroupTag.subgroup_tag_id);
+          if (result.success && result.data && result.data.formula_expression) {
+            dispatch(assetAction.setFormulaInput(result.data.formula_expression));
+            dispatch(assetAction.setSelectedFormulaId(result.data.formula_id));
           }
         } catch (error) {
           console.error("Error fetching formula for tag:", error);

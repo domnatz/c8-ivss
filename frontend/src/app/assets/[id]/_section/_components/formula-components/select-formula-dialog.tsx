@@ -3,7 +3,7 @@ import { Formula } from "@/models/formula";
 import { Button } from "@/components/ui/button";
 import { SearchForm } from "@/components/user/search-form";
 import { TrashIcon, CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/outline";
-import { formulaService, formulaClientService } from "@/_actions/formula-actions";
+import { fetchAllFormulas, removeFormula, fetchFormulaById } from "@/_actions/formula-actions";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { assetAction } from "../../../_redux/asset-slice";
 import { toast } from "react-toastify";
@@ -43,7 +43,12 @@ export const SelectFormulaDialog: React.FC<SelectFormulaDialogProps> = ({
   const dispatch = useAppDispatch();
 
   const loadFormulas = async () => {
-    await formulaClientService.loadFormulas(dispatch);
+    const result = await fetchAllFormulas();
+    if (result.success && result.data) {
+      dispatch(assetAction.setFormulas(result.data));
+    } else {
+      toast.error(result.error || "Failed to load formulas");
+    }
   };
 
   const handleOpenChange = async (open: boolean) => {
@@ -69,16 +74,20 @@ export const SelectFormulaDialog: React.FC<SelectFormulaDialogProps> = ({
     setIsDeleting(true);
 
     try {
-      await formulaService.deleteFormula(selectedFormulaForDelete);1
+      const result = await removeFormula(selectedFormulaForDelete);
       
-      // Update local state to remove deleted formula
-      dispatch(assetAction.removeFormula(selectedFormulaForDelete));
+      if (result.success) {
+        // Update local state to remove deleted formula
+        dispatch(assetAction.removeFormula(selectedFormulaForDelete));
 
-      // Reset selection
-      setSelectedFormulaForDelete(undefined);
-      setSelectedFormulaToApply(null);
+        // Reset selection
+        setSelectedFormulaForDelete(undefined);
+        setSelectedFormulaToApply(null);
 
-      toast.success("Formula deleted successfully");
+        toast.success("Formula deleted successfully");
+      } else {
+        toast.error(result.error || "Failed to delete formula");
+      }
     } catch (error) {
       console.error("Error deleting formula:", error);
       toast.error("Failed to delete formula");
@@ -120,12 +129,10 @@ export const SelectFormulaDialog: React.FC<SelectFormulaDialogProps> = ({
         dispatch(assetAction.setSelectedFormulaId(selectedFormulaToApply.formula_id));
 
         // Refresh the UI by refetching the formula to ensure consistency
-        const refreshedFormula = await formulaService.getFormulaById(
-          selectedFormulaToApply.formula_id
-        );
-        dispatch(
-          assetAction.setFormulaInput(refreshedFormula.formula_expression)
-        );
+        const refreshResult = await fetchFormulaById(selectedFormulaToApply.formula_id);
+        if (refreshResult.success && refreshResult.data) {
+          dispatch(assetAction.setFormulaInput(refreshResult.data.formula_expression));
+        }
 
         toast.success("Formula assigned to tag successfully");
       } else {

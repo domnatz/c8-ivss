@@ -62,6 +62,7 @@ export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ formula_id: formulaId }),
+    next: { tags: ['formulas', 'subgroup_tags'] },
   });
 
   if (!response.ok) {

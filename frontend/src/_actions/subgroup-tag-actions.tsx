@@ -2,6 +2,7 @@
 
 import { addTagToSubgroupTag as addTagToSubgroupService, updateSubgroupTagFormula as updateSubgroupTagFormulaService } from "@/_services/subgroup-tag-service";
 import { Subgroup_tag } from "@/models/subgroup-tag";
+import { revalidateTag } from "next/cache";
 
 export async function addTagToSubgroupTag(
   subgroupId: number,
@@ -21,6 +22,8 @@ export async function addTagToSubgroupTag(
 export async function updateSubgroupTagFormula(subgroupTagId: number, formulaId: number) {
   try {
     await updateSubgroupTagFormulaService(subgroupTagId, formulaId);
+    revalidateTag("subgroup_tags");
+    revalidateTag("formulas");
   } catch (error) {
     console.error("Error updating subgroup tag formula:", error);
   }

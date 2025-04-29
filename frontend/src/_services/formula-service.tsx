@@ -1,6 +1,6 @@
 "use server";
 
-import { Formula } from "@/models/formula";
+import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
 // Define the server-side formula actions
 export async function getAllFormulas(): Promise<Formula[]> {
@@ -42,6 +42,7 @@ export async function updateFormula(formulaId: number, formula: Omit<Formula, 'f
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(formula),
+    next: { tags: ['formulas'] },
   });
   
   if (!response.ok) {
@@ -74,7 +75,7 @@ export const getFormulaVariablesWithMappings = async (
 ): Promise<any[]> => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
+      `${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/variables?context_tag_id=${contextTagId}`
     );
     
     if (!response.ok) {
@@ -93,6 +94,29 @@ export async function getFormulaBySubgroupTagId(subgroupTagId: number): Promise<
   const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/subgroup-tags/${subgroupTagId}/formula`);
   if (!response.ok) {
     throw new Error(`Failed to fetch formula for subgroup tag with ID ${subgroupTagId}`);
+  }
+  return response.json();
+}
+
+export async function evaluateFormula(evaluation: FormulaEvaluation): Promise<FormulaEvaluation> {
+  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/evaluate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(evaluation),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to evaluate formula');
+  }
+  return response.json();
+}
+
+export async function getFormulaTemplates(formulaId: number): Promise<Template[]> {
+  const response = await fetch(`${process.env.BASE_URL || "http://localhost:8000/api"}/formulas/${formulaId}/templates`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch templates for formula with ID ${formulaId}`);
   }
   return response.json();
 }

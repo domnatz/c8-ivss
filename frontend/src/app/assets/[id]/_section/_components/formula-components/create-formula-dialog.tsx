@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useAppDispatch, useAppSelector } from "@/hooks/hooks";
 import { assetAction } from "../../../_redux/asset-slice";
 import { toast } from "react-toastify";
-import { formulaClientService } from "@/_actions/formula-actions";
+import { addFormula, fetchAllFormulas } from "@/_actions/formula-actions";
 import { extractVariables } from "../../../../../../utils/formula_utils";
 import {
   Dialog,
@@ -66,24 +66,26 @@ export const CreateFormulaDialog: React.FC<CreateFormulaDialogProps> = ({
 
       console.log("Sending formula data:", formulaData);
 
-      // Create formula in the database
-      const result = await formulaClientService.submitFormula(
-        formulaData,
-        dispatch
-      );
+      // Create formula using server action
+      const result = await addFormula(formulaData);
 
-      if (result) {
+      if (result.success) {
         // Reset form via Redux
         dispatch(assetAction.resetFormulaForm());
 
         // Reload formulas list to include the new formula
-        await formulaClientService.loadFormulas(dispatch);
+        const formulasResult = await fetchAllFormulas();
+        if (formulasResult.success && formulasResult.data) {
+          dispatch(assetAction.setFormulas(formulasResult.data));
+        }
 
         // Show success message
         toast.success(`Formula "${formulaName}" created successfully!`);
         
         // Close the dialog
         setOpen(false);
+      } else {
+        toast.error(result.error || "Failed to create formula");
       }
     } catch (error) {
       console.error("Error creating formula:", error);

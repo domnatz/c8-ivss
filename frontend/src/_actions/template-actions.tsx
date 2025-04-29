@@ -3,7 +3,7 @@
 import * as templateService from "@/_services/template-service";
 import { Template } from "@/models/template";
 import { revalidateTag } from 'next/cache';
-import { formulaClientService } from "@/_actions/formula-actions"; // Import formula service
+import { fetchFormulaBySubgroupTagId } from "@/_actions/formula-actions"; // Change to direct import of server action
 
 /**
  * Save a template and return a simplified result
@@ -76,14 +76,21 @@ export const assignTemplate = async (
     // Revalidate formulas cache
     revalidateTag('formulas');
 
-    // Fetch the updated formula and return it to the client
-    const updatedFormula = await formulaClientService.getFormulaBySubgroupTagId(subgroupTagId);
-
+    // Fetch the updated formula using the server action
+    const formulaResult = await fetchFormulaBySubgroupTagId(subgroupTagId);
+    
+    if (formulaResult.success && formulaResult.data) {
+      return {
+        success: true,
+        message: "Template applied successfully!",
+        formula_id: formulaResult.data.formula_id,
+        formula_expression: formulaResult.data.formula_expression,
+      };
+    }
+    
     return {
       success: true,
       message: "Template applied successfully!",
-      formula_id: updatedFormula?.formula_id,
-      formula_expression: updatedFormula?.formula_expression, // Include formula expression for client-side updates
     };
   } catch (error) {
     console.error("Template assignment failed:", error);

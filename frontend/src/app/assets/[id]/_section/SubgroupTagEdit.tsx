@@ -18,7 +18,7 @@ import AssignSubgroupTagVariable from "./_components/assign-subgroup_tag-variabl
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formulaClientService } from "@/_actions/formula-actions";
+import { fetchFormulaVariables } from "@/_actions/formula-actions";
 import {
   getVariableMappings,
   removeVariableMapping,
@@ -66,15 +66,19 @@ export default function SubgroupTagEdit({
   };
 
   React.useEffect(() => {
-    async function fetchFormulaVariables() {
+    async function fetchFormulaVars() {
       if (selectedFormulaId) {
         setLoadingVariables(true);
         try {
-          const variables = await formulaClientService.getFormulaVariables(
-            selectedFormulaId
-          );
-          console.log("Fetched formula variables:", variables); // Added console log here
-          setFormulaVariables(variables);
+          const result = await fetchFormulaVariables(selectedFormulaId);
+          if (result.success && result.data) {
+            console.log("Fetched formula variables:", result.data);
+            setFormulaVariables(result.data);
+          } else {
+            console.error("Error in formula variables response:", result.error);
+            toast.error("Failed to fetch formula variables");
+            setFormulaVariables([]);
+          }
         } catch (error) {
           console.error("Error fetching formula variables:", error);
           toast.error("Failed to fetch formula variables");
@@ -87,7 +91,7 @@ export default function SubgroupTagEdit({
       }
     }
 
-    fetchFormulaVariables();
+    fetchFormulaVars();
   }, [selectedFormulaId]);
 
   // Fetch variable mappings when selected subgroup tag changes

@@ -1,120 +1,120 @@
-import { AppDispatch } from "@/store";
-import { getAllFormulas, createFormula, getFormulaById, updateFormula, deleteFormula, getFormulaVariables, getFormulaVariablesWithMappings, getFormulaBySubgroupTagId } from "@/_services/formula-service";
+"use server";
+
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
+import { 
+  getAllFormulas, 
+  createFormula, 
+  getFormulaById, 
+  updateFormula, 
+  deleteFormula, 
+  getFormulaVariables, 
+  getFormulaVariablesWithMappings, 
+  getFormulaBySubgroupTagId,
+  evaluateFormula,
+  getFormulaTemplates
+} from "@/_services/formula-service";
+import { revalidateTag } from "next/cache";
 
-// Define a fallback URL to use if environment variable isn't set
-const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+export async function fetchAllFormulas() {
+  try {
+    const formulas = await getAllFormulas();
+    return { success: true, data: formulas };
+  } catch (error: any) {
+    console.error("There was an error fetching formulas!", error);
+    return { success: false, error: error.message };
+  }
+}
 
-export const formulaService = {
-  getAllFormulas: async (): Promise<Formula[]> => {
-    return getAllFormulas();
-  },
+export async function fetchFormulaById(formulaId: number) {
+  try {
+    const formula = await getFormulaById(formulaId);
+    return { success: true, data: formula };
+  } catch (error: any) {
+    console.error(`There was an error fetching formula with ID ${formulaId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-  getFormulaById: async (formulaId: number): Promise<Formula> => {
-    return getFormulaById(formulaId);
-  },
+export async function addFormula(formula: Omit<Formula, 'formula_id'>) {
+  try {
+    const newFormula = await createFormula(formula);
+    revalidateTag('formulas');
+    return { success: true, data: newFormula };
+  } catch (error: any) {
+    console.error("There was an error creating formula!", error);
+    return { success: false, error: error.message };
+  }
+}
 
-  createFormula: async (formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
-    return createFormula(formula);
-  },
+export async function editFormula(formulaId: number, formula: Omit<Formula, 'formula_id'>) {
+  try {
+    const updatedFormula = await updateFormula(formulaId, formula);
+   revalidateTag('formulas');
+    return { success: true, data: updatedFormula };
+  } catch (error: any) {
+    console.error(`There was an error updating formula with ID ${formulaId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-  updateFormula: async (formulaId: number, formula: Omit<Formula, 'formula_id'>): Promise<Formula> => {
-    return updateFormula(formulaId, formula);
-  },
+export async function removeFormula(formulaId: number) {
+  try {
+    await deleteFormula(formulaId);
+    revalidateTag('formulas');
+    return { success: true };
+  } catch (error: any) {
+    console.error(`There was an error deleting formula with ID ${formulaId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-  deleteFormula: async (formulaId: number): Promise<void> => {
-    return deleteFormula(formulaId);
-  },
+export async function evaluateFormulaExpression(evaluation: FormulaEvaluation) {
+  try {
+    const result = await evaluateFormula(evaluation);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error("There was an error evaluating formula!", error);
+    return { success: false, error: error.message };
+  }
+}
 
-  evaluateFormula: async (evaluation: FormulaEvaluation): Promise<FormulaEvaluation> => {
-    const response = await fetch(`${BASE_URL}/formulas/evaluate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(evaluation),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to evaluate formula');
-    }
-    return response.json();
-  },
+export async function fetchFormulaTemplates(formulaId: number) {
+  try {
+    const templates = await getFormulaTemplates(formulaId);
+    return { success: true, data: templates };
+  } catch (error: any) {
+    console.error(`There was an error fetching templates for formula with ID ${formulaId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-  getFormulaTemplates: async (formulaId: number): Promise<Template[]> => {
-    const response = await fetch(`${BASE_URL}/formulas/${formulaId}/templates`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch templates for formula with ID ${formulaId}`);
-    }
-    return response.json();
-  },
-  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
-    return getFormulaVariables(formulaId);
-  },
-  
-  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
-    return getFormulaVariablesWithMappings(formulaId, contextTagId);
-  },
-  
-  getFormulaBySubgroupTagId: async (subgroupTagId: number): Promise<any> => {
-    return getFormulaBySubgroupTagId(subgroupTagId);
-  },
-};
+export async function fetchFormulaVariables(formulaId: number) {
+  try {
+    const variables = await getFormulaVariables(formulaId);
+    return { success: true, data: variables };
+  } catch (error: any) {
+    console.error(`There was an error fetching variables for formula with ID ${formulaId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-// New client-side functions for component integration
-export const formulaClientService = {
-  loadFormulas: async (dispatch: AppDispatch): Promise<void> => {
-    dispatch({ type: 'assetSlice/setFormulasLoading', payload: true });
-    try {
-      const formulas = await formulaService.getAllFormulas();
-      dispatch({ type: 'assetSlice/setFormulas', payload: formulas });
-    } catch (error) {
-      console.error("Error loading formulas:", error);
-    } finally {
-      dispatch({ type: 'assetSlice/setFormulasLoading', payload: false });
-    }
-  },
+export async function fetchFormulaVariablesWithMappings(formulaId: number, contextTagId: number) {
+  try {
+    const variablesWithMappings = await getFormulaVariablesWithMappings(formulaId, contextTagId);
+    return { success: true, data: variablesWithMappings };
+  } catch (error: any) {
+    console.error(`There was an error fetching variable mappings!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
-  submitFormula: async (formulaData: Omit<Formula, 'formula_id'>, dispatch: AppDispatch): Promise<boolean> => {
-    try {
-      const newFormula = await formulaService.createFormula(formulaData);
-      dispatch({ type: 'assetSlice/addFormula', payload: newFormula });
-      return true;
-    } catch (error) {
-      console.error("Error submitting formula:", error);
-      return false;
-    }
-  },
-
-  selectFormula: (formula: Formula, dispatch: AppDispatch): void => {
-    dispatch({ type: 'assetSlice/setFormulaInput', payload: formula.formula_expression });
-  },
-
-  getFormulaVariables: async (formulaId: number): Promise<Array<{ variable_name: string, variable_id?: number }>> => {
-    try {
-      return await formulaService.getFormulaVariables(formulaId);
-    } catch (error) {
-      console.error("Error loading formula variables:", error);
-      return [];
-    }
-  },
-  
-  getFormulaVariablesWithMappings: async (formulaId: number, contextTagId: number): Promise<any[]> => {
-    try {
-      return await formulaService.getFormulaVariablesWithMappings(formulaId, contextTagId);
-    } catch (error) {
-      console.error("Error loading formula variables with mappings:", error);
-      return [];
-    }
-  },
-  
-  getFormulaBySubgroupTagId: async (subgroupTagId: number): Promise<any> => {
-    try {
-      return await formulaService.getFormulaBySubgroupTagId(subgroupTagId);
-    } catch (error) {
-      console.error("Error fetching formula for subgroup tag:", error);
-      return null;
-    }
-  },
-};
+export async function fetchFormulaBySubgroupTagId(subgroupTagId: number) {
+  try {
+    const formula = await getFormulaBySubgroupTagId(subgroupTagId);
+    return { success: true, data: formula };
+  } catch (error: any) {
+    console.error(`There was an error fetching formula for subgroup tag with ID ${subgroupTagId}!`, error);
+    return { success: false, error: error.message };
+  }
+}
 
