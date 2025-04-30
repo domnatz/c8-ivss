@@ -12,7 +12,7 @@ import {
   fetchMasterlistByFileId,
   fetchAllMasterlists,
 } from "@/_services/masterlist-service"; // Import fetchAllMasterlists
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function createAsset(_prevState: any = null) {
   const asset_name = "New Asset";
@@ -33,7 +33,7 @@ export async function createSubgroup(assetId: number, _prevState: any = null) {
   try {
     const response = await addSubgroup(assetId);
     await response.json();
-    revalidatePath(`/${assetId}`);
+    revalidateTag(`subgroups`);
     return { success: true };
   } catch (error: any) {
     console.error("There was an error adding the subgroup!", error);

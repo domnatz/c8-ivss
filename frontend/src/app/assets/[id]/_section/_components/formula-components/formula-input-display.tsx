@@ -33,23 +33,33 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
   // Fetch formula when selected subgroup tag changes
   React.useEffect(() => {
     const fetchFormulaForTag = async () => {
-      if (selectedSubgroupTag?.subgroup_tag_id && selectedSubgroupTag?.formula_id) {
-        try {
-          setIsLoading(true);
-          const result = await fetchFormulaBySubgroupTagId(selectedSubgroupTag.subgroup_tag_id);
-          if (result.success && result.data && result.data.formula_expression) {
-            dispatch(assetAction.setFormulaInput(result.data.formula_expression));
-            dispatch(assetAction.setSelectedFormulaId(result.data.formula_id));
-          }
-        } catch (error) {
-          console.error("Error fetching formula for tag:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else if (selectedSubgroupTag && !selectedSubgroupTag.formula_id) {
-        // Clear formula if the tag has no formula
+      // If no subgroup tag is selected, clear the formula
+      if (!selectedSubgroupTag?.subgroup_tag_id) {
         dispatch(assetAction.setFormulaInput(""));
         dispatch(assetAction.setSelectedFormulaId(null));
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        // Always fetch from the API when we have a tag ID
+        const result = await fetchFormulaBySubgroupTagId(selectedSubgroupTag.subgroup_tag_id);
+        
+        if (result.success && result.data?.formula_expression) {
+          dispatch(assetAction.setFormulaInput(result.data.formula_expression));
+          dispatch(assetAction.setSelectedFormulaId(result.data.formula_id));
+        } else {
+          // No formula found for this tag in the database
+          dispatch(assetAction.setFormulaInput(""));
+          dispatch(assetAction.setSelectedFormulaId(null));
+        }
+      } catch (error) {
+        console.error("Error fetching formula for tag:", error);
+        // On error, clear the formula display
+        dispatch(assetAction.setFormulaInput(""));
+        dispatch(assetAction.setSelectedFormulaId(null));
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -65,8 +75,7 @@ export const FormulaDisplay: React.FC<FormulaDisplayProps> = ({
           selectedSubgroupTag.subgroup_tag_id,
           null as any  // This cast will allow null to pass through
         );
-        
-        // Update the local state to match the backend
+   // Update the local state to match the backend
         const updatedTag = {
           ...selectedSubgroupTag,
           formula_id: null,  // Keep using null as before

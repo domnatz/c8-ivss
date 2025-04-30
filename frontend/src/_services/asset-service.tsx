@@ -50,6 +50,7 @@ export const addSubgroup = (
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+    next: { tags: ["subgroups"] },
   });
 };
 

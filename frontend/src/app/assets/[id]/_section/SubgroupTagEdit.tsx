@@ -1,20 +1,12 @@
 "use client";
 
 import * as React from "react";
-import {
-  CheckIcon,
-  DocumentCheckIcon,
-  TagIcon,
-  XCircleIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
-
+import { XCircleIcon } from "@heroicons/react/24/outline";
 import { Subgroup_tag } from "@/models/subgroup-tag";
 import { useParams } from "next/navigation";
 import { toast } from "react-toastify";
 import TemplateSelector from "@/app/assets/[id]/_section/_components/template-selection";
 import { useAppSelector, useAppDispatch } from "@/hooks/hooks";
-import AssignSubgroupTagVariable from "./_components/assign-subgroup_tag-variable";
 import { assetAction } from "../_redux/asset-slice";
 import FormulaSection from "./_components/formula-section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,13 +15,8 @@ import {
   getVariableMappings,
   removeVariableMapping,
 } from "@/_actions/formula-variable-actions";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { getTagNameFromMapping } from "@/utils/tag-utils";
+import { variable_mappings } from "@/models/variable_mappings";
+import VariablesList from "./_components/variable-components/VariablesList";
 
 interface SubgroupTagEditProps {
   selectedSubgroupTag: Subgroup_tag | null;
@@ -40,99 +27,26 @@ export default function SubgroupTagEdit({
 }: SubgroupTagEditProps) {
   const params = useParams();
   const dispatch = useAppDispatch();
-  const [formulaVariables, setFormulaVariables] = React.useState<
-    Array<{ variable_name: string; variable_id?: number }>
-  >([]);
+
+  // Update state types to match the imported models
+  const [formulaVariables, setFormulaVariables] = React.useState<any[]>([]);
   const [loadingVariables, setLoadingVariables] = React.useState(false);
   const [variableMappings, setVariableMappings] = React.useState<
-    Record<number, any>
+    Record<
+      number,
+      variable_mappings & { tag_name?: string; subgroup_tag_name?: string }
+    >
   >({});
   const [loadingMappings, setLoadingMappings] = React.useState(false);
 
-  // Get state from Redux
-  const childTags = useAppSelector((state) => state.assetState.childTags);
-  const childTagsLoading = useAppSelector(
-    (state) => state.assetState.childTagsLoading
-  );
-
-  // Get selectedFormulaId from Redux
   const selectedFormulaId = useAppSelector(
     (state) => state.assetState.selectedFormulaId
   );
 
-  // Handle tag deselection
   const handleDeselectTag = () => {
     dispatch(assetAction.selectSubgroupTag(null));
   };
 
-  React.useEffect(() => {
-    async function fetchFormulaVars() {
-      if (selectedFormulaId) {
-        setLoadingVariables(true);
-        try {
-          const result = await fetchFormulaVariables(selectedFormulaId);
-          if (result.success && result.data) {
-            console.log("Fetched formula variables:", result.data);
-            setFormulaVariables(result.data);
-          } else {
-            console.error("Error in formula variables response:", result.error);
-            toast.error("Failed to fetch formula variables");
-            setFormulaVariables([]);
-          }
-        } catch (error) {
-          console.error("Error fetching formula variables:", error);
-          toast.error("Failed to fetch formula variables");
-          setFormulaVariables([]);
-        } finally {
-          setLoadingVariables(false);
-        }
-      } else {
-        setFormulaVariables([]);
-      }
-    }
-
-    fetchFormulaVars();
-  }, [selectedFormulaId]);
-
-  // Fetch variable mappings when selected subgroup tag changes
-  React.useEffect(() => {
-    async function fetchVariableMappings() {
-      if (selectedSubgroupTag) {
-        setLoadingMappings(true);
-        try {
-          const mappings = await getVariableMappings(
-            selectedSubgroupTag.subgroup_tag_id
-          );
-          console.log("Fetched variable mappings:", mappings); // Log the entire response
-
-          // Convert array to object with variableId as key for easy lookup
-          const mappingsMap = mappings.reduce(
-            (acc: Record<number, any>, mapping: any) => {
-              if (mapping.variable_id) {
-                // Log each mapping to inspect its structure
-                console.log("Individual mapping:", mapping);
-                acc[mapping.variable_id] = mapping;
-              }
-              return acc;
-            },
-            {}
-          );
-          setVariableMappings(mappingsMap);
-        } catch (error) {
-          console.error("Error fetching variable mappings:", error);
-          toast.error("Failed to fetch variable mappings");
-        } finally {
-          setLoadingMappings(false);
-        }
-      } else {
-        setVariableMappings({});
-      }
-    }
-
-    fetchVariableMappings();
-  }, [selectedSubgroupTag]);
-
-  // Add this refresh function to reload variable mappings
   const refreshVariableMappings = async () => {
     if (!selectedSubgroupTag) return;
 
@@ -142,10 +56,17 @@ export default function SubgroupTagEdit({
         selectedSubgroupTag.subgroup_tag_id
       );
       const mappingsMap = mappings.reduce(
-        (acc: Record<number, any>, mapping: any) => {
-          if (mapping.variable_id) {
-            acc[mapping.variable_id] = mapping;
-          }
+        (
+          acc: Record<
+            number,
+            variable_mappings & {
+              tag_name?: string;
+              subgroup_tag_name?: string;
+            }
+          >,
+          mapping: any
+        ) => {
+          if (mapping.variable_id) acc[mapping.variable_id] = mapping;
           return acc;
         },
         {}
@@ -159,22 +80,17 @@ export default function SubgroupTagEdit({
     }
   };
 
-  // Handle removing a variable mapping
   const handleRemoveMapping = async (variableId: number) => {
     if (!selectedSubgroupTag || !variableId) return;
 
     try {
-      // Find the mapping ID from the variableMappings
       const mapping = variableMappings[variableId];
       if (!mapping || !mapping.mapping_id) {
         toast.error("Could not find mapping ID");
         return;
       }
 
-      // Use the mapping_id instead of subgroupTagId and variableId
       await removeVariableMapping(mapping.mapping_id);
-
-      // Update state after successful removal to immediately reflect in the UI
       setVariableMappings((prev) => {
         const newMappings = { ...prev };
         delete newMappings[variableId];
@@ -188,13 +104,42 @@ export default function SubgroupTagEdit({
     }
   };
 
+  React.useEffect(() => {
+    async function fetchFormulaVars() {
+      if (selectedFormulaId) {
+        setLoadingVariables(true);
+        try {
+          const result = await fetchFormulaVariables(selectedFormulaId);
+          if (result.success && result.data) {
+            setFormulaVariables(result.data);
+          } else {
+            toast.error("Failed to fetch formula variables");
+            setFormulaVariables([]);
+          }
+        } catch (error) {
+          toast.error("Failed to fetch formula variables");
+          setFormulaVariables([]);
+        } finally {
+          setLoadingVariables(false);
+        }
+      } else {
+        setFormulaVariables([]);
+      }
+    }
+
+    fetchFormulaVars();
+  }, [selectedFormulaId]);
+
+  React.useEffect(() => {
+    refreshVariableMappings();
+  }, [selectedSubgroupTag]);
+
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex flex-col justify-between items-start gap-1">
         <div className="flex flex-col justify-between w-full">
           <h2 className="text-lg font-semibold flex flex-wrap items-center gap-2">
             Tag Editor
-            {/* Display selected subgroup tag name */}
             {selectedSubgroupTag && (
               <span className="text-sm text-blue-600 bg-blue-100 flex flex-row items-center gap-2 p-1 pl-4 pr-2 min-w-[150px] rounded-full overflow-hidden">
                 {selectedSubgroupTag.subgroup_tag_name}
@@ -211,76 +156,26 @@ export default function SubgroupTagEdit({
         </div>
       </div>
 
-      <div className="w-full ">
+      <div className="w-full">
         <TemplateSelector />
       </div>
 
-      {/* Display formula subgroup tags */}
       <div className="rounded-md bg-foreground/5 border border-zinc-200 h-full p-5 w-full overflow-y-auto">
         {selectedSubgroupTag ? (
           <>
-            {/* FormulaSection moved inside the selectedSubgroupTag conditional */}
             <FormulaSection isDisabled={!selectedSubgroupTag} />
-
-            {/* Display formula variables with mappings */}
             {loadingVariables || loadingMappings ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : formulaVariables.length > 0 ? (
-              <div className="flex flex-col gap-2 ">
-                {formulaVariables.map((variable, index) => (
-                  <div
-                    key={index}
-                    className="inline-flex w-full items-center gap-2"
-                  >
-                    <div className="p-2 text-sm border border-border rounded-md bg-background font-medium w-fit">
-                      {variable.variable_name}
-                    </div>
-                    <span>=</span>
-                    {variable.variable_id &&
-                    variableMappings[variable.variable_id] ? (
-                      <div className="flex items-center gap-2 p-2 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700 flex-grow min-w-0">
-                        <TagIcon className="w-4 h-4 flex-shrink-0" />
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex-grow truncate overflow-hidden text-ellipsis">
-                                {getTagNameFromMapping(
-                                  variableMappings[variable.variable_id]
-                                )}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {getTagNameFromMapping(
-                                  variableMappings[variable.variable_id]
-                                )}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <button
-                          onClick={() =>
-                            handleRemoveMapping(variable.variable_id!)
-                          }
-                          className="p-1 hover:bg-blue-100 rounded-full cursor-pointer flex-shrink-0"
-                        >
-                          <XMarkIcon className="w-4 h-4 text-blue-700" />
-                        </button>
-                      </div>
-                    ) : (
-                      <AssignSubgroupTagVariable
-                        buttonText={`Assign tag to ${variable.variable_name}`}
-                        variableName={variable.variable_name}
-                        variableId={variable.variable_id}
-                        refreshChildTags={refreshVariableMappings} // Add this prop
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+              <VariablesList
+                variables={formulaVariables}
+                mappings={variableMappings}
+                onRemoveMapping={handleRemoveMapping}
+                onAssignTag={refreshVariableMappings}
+              />
             ) : selectedFormulaId ? (
               <div className="text-sm text-muted-foreground mt-4">
                 No variables found for this formula.
