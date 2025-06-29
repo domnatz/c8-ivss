@@ -17,14 +17,18 @@ from fastapi.responses import JSONResponse, FileResponse
 import os
 import tempfile
 
+# Create our FastAPI application
+app = FastAPI()
+
 # --- Database initialization ---
 # This function runs at app startup to create database tables
 async def init_models():
-    async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
-
-# Create our FastAPI application
-app = FastAPI(on_startup=[init_models])
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(models.Base.metadata.create_all)
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        # Don't fail if database is already initialized
 
 # --- CORS configuration ---
 # Allow frontend requests from localhost and Vercel domains
@@ -57,6 +61,12 @@ async def get_db():
 # --- Base health check endpoint ---
 @app.get("/")
 async def read_root():
+    # Initialize database on first request (for serverless)
+    try:
+        await init_models()
+    except Exception as e:
+        print(f"Init models error: {e}")
+    
     return {"message": "Welcome to the FastAPI Backend!"}
 
 # --- Asset Management Endpoints ---
