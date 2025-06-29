@@ -1,5 +1,5 @@
 // Define a fallback URL to use if environment variable isn't set
-const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 // Add asset by calling backend API
 export function addAsset({

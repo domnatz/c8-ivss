@@ -3,7 +3,7 @@
 import { Formula, FormulaEvaluation, Template } from "@/models/formula";
 
 // Define base URL for API calls
-const BASE_URL = `${process.env.BASE_URL || "http://localhost:8000/api"}`;
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}`;
 
 // Define the server-side formula actions
 export async function getAllFormulas(): Promise<Formula[]> {

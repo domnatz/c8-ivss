@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete
-from backend.database import AsyncSessionLocal, engine
-from backend import models
+from database import AsyncSessionLocal, engine
+import models
 from pydantic import BaseModel
 import re
 from typing import List, Dict, Any, Optional
@@ -27,14 +27,22 @@ async def init_models():
 app = FastAPI(on_startup=[init_models])
 
 # --- CORS configuration ---
-# Allow frontend requests from localhost
+# Allow frontend requests from localhost and Vercel domains
+import os
+
+# Get frontend URL from environment variable or use default
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 origins = [
     "http://localhost:3000",
+    FRONTEND_URL,
+    # Allow all Vercel domains for development
+    "https://*.vercel.app"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # More permissive for Vercel deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

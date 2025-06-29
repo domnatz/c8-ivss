@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 // Define a fallback URL to use if environment variable isn't set
-const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export const uploadTags = async (file: File): Promise<void> => {
   const reader = new FileReader();

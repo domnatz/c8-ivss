@@ -1,5 +1,5 @@
 // Define a fallback URL to use if environment variable isn't set
-const BASE_URL = process.env.BASE_URL || "http://localhost:8000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export async function fetchMasterlist() {
   const response = await fetch(`${BASE_URL}/masterlist/latest`); // Correct endpoint

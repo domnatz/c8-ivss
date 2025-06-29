@@ -6,7 +6,7 @@ import { Template } from "@/models/template";
 import { revalidateTag } from "next/cache";
 
 // Base API URL
-const API_URL = "http://localhost:8000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 /**
  * Save a new template
